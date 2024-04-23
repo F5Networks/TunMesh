@@ -39,28 +39,58 @@ def open_tunnel(logger:)
 end
 
 def process_traffic(logger:, queue_manager:, tun:)
-  write_thread = Thread.new do
+  logger.debug("process_traffic() Entering")
+  threads = []
+
+  # TODO: This should be select() or something.
+  threads.push(Thread.new do
+                 loop do
+                   begin
+                     packet = TunMesh::IPC::Packet.from_json(queue_manager.tun_write.pop)
+                     logger.debug { "Writing #{packet.id}: #{packet.data_length}b, #{Time.now.to_f - packet.stamp}s old" }
+                     tun.to_io.write(packet.data)
+                     tun.to_io.flush
+                   rescue StandardError => exc
+                     logger.warn { "Failed to write #{packet.id}: #{exc.class}: #{exc}" }
+                   end
+                 end
+               end)
+
+  threads.push(Thread.new do
     loop do
-      packet = queue_manager.tun_write.pop
-      logger.debug { "Writing #{packet.md5} #{packet.data_length}b" }
-      tun.to_io.write(packet.data)
-    end      
+      raw_data = tun.to_io.sysread(tun.mtu)
+      packet = TunMesh::IPC::Packet.new(data: raw_data)
+      packet.stamp = Time.now.to_f
+      logger.debug { "Read #{packet.id} #{packet.data_length}b" }
+      queue_manager.tun_read.push(packet.to_json)
+    rescue StandardError => exc
+      logger.warn { "Failed to read tun device: #{exc.class}: #{exc}" }
+    end
+  end)
+
+  loop do
+    break unless threads.map(&:alive?).all?
+    queue_manager.tun_heartbeat.push(Time.now.to_f)
+    sleep(1) # TODO: Hardcode
   end
 
-  while write_thread.alive?
-    raw_data = tun.to_io.sysread(tun.mtu)
-    packet = TunMesh::IPC::Packet.new(data: raw_data)
-    logger.debug { "Read #{packet.md5} #{packet.data_length}b" }
-    queue_manager.tun_read.push(packet)
-  end
+  logger.debug("process_traffic() Exiting")
 
-  logger.debug("process_traffic() exiting")
+  threads.each(&:terminate)
+  threads.each(&:join)
+  
+  logger.debug("process_traffic() Complete")
 end
 
 def main
   logger = Logger.new(STDERR, progname: 'tun_handler')
   queue_manager = TunMesh::IPC::QueueManager.new(control: false) # Control = false: Queues are expected to exist
 
+  # Ensure we can open the queue
+  queue_manager.tun_read
+  queue_manager.tun_write
+  queue_manager.tun_heartbeat
+  
   open_tunnel(logger: logger) do |tun|
     loop do
       process_traffic(logger: logger, queue_manager: queue_manager, tun: tun)

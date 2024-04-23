@@ -2,7 +2,6 @@ require 'logger'
 require 'securerandom'
 
 require './lib/tun_mesh/config'
-require './lib/tun_mesh/ipc/queue_manager'
 require './lib/tun_mesh/vpn/router'
 require_relative 'registrations'
 require_relative 'structs/net_address'
@@ -11,7 +10,7 @@ require_relative 'structs/node_info'
 module TunMesh
   module ControlPlane
     class Manager
-      attr_reader :id, :queue_manager, :registrations, :self_node_info
+      attr_reader :id, :registrations, :router, :self_node_info
       
       def initialize
         @logger = Logger.new(STDERR, progname: self.class.to_s)
@@ -28,7 +27,6 @@ module TunMesh
           @registrations.bootstrap_node(remote_url: node_url)
         end
 
-        @queue_manager = TunMesh::IPC::QueueManager.new(control: true)
         @router = TunMesh::VPN::Router.new(manager: self)
 
         @tx_queue = Queue.new
@@ -37,11 +35,14 @@ module TunMesh
         _worker_manager
       end
 
+      def receive_packet(**kwargs)
+        @router.rx_remote_packet(**kwargs)
+      end
+
       def transmit_packet(**kwargs)
         @tx_queue.push(kwargs)
       end
 
-      
       private
 
       def _new_tx_worker(id:)
@@ -65,11 +66,11 @@ module TunMesh
       def _transmit_packet(dest_addr:, packet:)
         remote_node = @registrations.nodes_by_address[dest_addr]
         if remote_node.nil?
-          @logger.warn("Dropping packet #{packet.md5}: Destination #{dest_addr} unknown")
+          @logger.warn { "Dropping packet #{packet.id}: Destination #{dest_addr} unknown" }
           return
         end
 
-        @logger.debug("Transmitting packet #{packet.md5} to #{remote_node.node_info.id} / #{dest_addr}")
+        @logger.debug { "Transmitting packet #{packet.id} to #{remote_node.node_info.id} / #{dest_addr}" }
         remote_node.transmit_packet(packet: packet)
       end
       

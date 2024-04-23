@@ -3,7 +3,8 @@ require 'sysvmq'
 module TunMesh
   class IPC
     class Queue
-      def initialize(queue_id:, buffer_size: 2048, create: false, mode: 0o660)
+      # TODO: Opening 666
+      def initialize(queue_id:, buffer_size: 2048, create: false, mode: 0o0666)
         flags = mode
         flags |= (SysVMQ::IPC_CREAT | SysVMQ::IPC_EXCL) if create == true
         
@@ -14,6 +15,8 @@ module TunMesh
 
         # Hook in the destructor to clean up, if we created the queue
         ObjectSpace.define_finalizer(self, self.class.finalize(@mq)) if create
+      rescue StandardError => exc
+        raise(exc.class, "Failed to init queue #{queue_id}: #{exc}")
       end
 
       def self.finalize(mq)

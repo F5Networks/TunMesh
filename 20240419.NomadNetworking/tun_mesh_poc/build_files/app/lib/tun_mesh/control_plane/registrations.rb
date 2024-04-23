@@ -43,7 +43,7 @@ module TunMesh
         return registration
       end
 
-      def nodes_by_address(dest_addr)
+      def nodes_by_address
         # TODO: Caching
         @remote_nodes.values.map { |rn| [rn.node_info.private_address.address, rn] }.to_h
       end

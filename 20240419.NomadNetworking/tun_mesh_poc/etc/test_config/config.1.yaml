@@ -1,0 +1,13 @@
+---
+control:
+  advertise_url: http://192.168.128.1:4567
+
+discovery:
+  bootstrap_node_urls:
+    - http://192.168.128.1:4568
+
+internal:
+  private_address_cidr: 192.168.129.10/24
+
+ipc:
+  queue_id: 0x544e4d10

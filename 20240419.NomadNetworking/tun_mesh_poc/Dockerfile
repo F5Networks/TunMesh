@@ -25,7 +25,10 @@ RUN apt-get update && \
     apt-get install -y ca-certificates
 
 # Test deps
-RUN apt-get install -y procps iproute2 net-tools iputils-ping netcat-openbsd
+RUN apt-get install -y procps iproute2 net-tools iputils-ping netcat-openbsd tcpdump
+
+RUN groupadd -g 100010 tunmesh && \
+    useradd -m -u 100010 -g 100010 tunmesh
 
 COPY --from=gem-compiler /usr/local/bundle /usr/local/bundle
 
@@ -34,3 +37,4 @@ WORKDIR /app
 RUN bundle install
 
 COPY build_files/ /
+USER tunmesh
