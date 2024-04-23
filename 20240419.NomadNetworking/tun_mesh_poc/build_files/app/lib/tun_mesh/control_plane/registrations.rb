@@ -43,11 +43,16 @@ module TunMesh
         return registration
       end
 
+      def nodes_by_address(dest_addr)
+        # TODO: Caching
+        @remote_nodes.values.map { |rn| [rn.node_info.private_address.address, rn] }.to_h
+      end
+
       def worker
         @worker ||= Thread.new do
           loop do
-            # TODO: Hardcode
-            sleep(2)
+            # TODO: Hardcode / slow
+            sleep(5)
             _groom
           end
         end

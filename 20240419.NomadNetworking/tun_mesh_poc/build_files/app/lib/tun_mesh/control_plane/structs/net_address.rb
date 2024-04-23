@@ -12,6 +12,8 @@ module TunMesh
       # NetAddr::IPv4 doesn't do CIDRs
       # NetAddr::CIDR appears to have been removed in V2
       class NetAddress < Base
+        attr_reader :address
+        
         FIELDS = {
           cidr: {
             type: String
@@ -29,7 +31,7 @@ module TunMesh
         end
 
         def netmask
-          @netmask ||= IPAddr.new(IPAddr.new(@cidr).netmask.to_s)
+          @netmask ||= IPAddr.new(IPAddr.new(@cidr).netmask.to_s).to_s
         end
 
         def prefix
@@ -43,7 +45,7 @@ module TunMesh
           split_str = @cidr.split('/')
           raise(ArgumentError, "#{cidr} is not a valid CIDR") unless split_str.length == 2
 
-          @address = IPAddr.new(split_str[0]),
+          @address = split_str[0]
           @prefix = split_str[1].to_i
         end
       end

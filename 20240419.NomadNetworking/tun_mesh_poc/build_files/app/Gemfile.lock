@@ -1,0 +1,49 @@
+GIT
+  remote: https://github.com/TJNII/rb_tuntap.git
+  revision: 66dfa0f5327ebac5c5cd4e1faa914733044fbfe9
+  specs:
+    rb_tuntap (0.2.2-x86_64-linux)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    base64 (0.2.0)
+    bindata (2.5.0)
+    httparty (0.21.0)
+      mini_mime (>= 1.0.0)
+      multi_xml (>= 0.5.2)
+    ipaddr (1.2.6)
+    mini_mime (1.1.5)
+    multi_xml (0.6.0)
+    mustermann (3.0.0)
+      ruby2_keywords (~> 0.0.1)
+    nio4r (2.7.1)
+    puma (6.4.2)
+      nio4r (~> 2.0)
+    rack (2.2.9)
+    rack-protection (3.2.0)
+      base64 (>= 0.1.0)
+      rack (~> 2.2, >= 2.2.4)
+    ruby2_keywords (0.0.5)
+    sinatra (3.2.0)
+      mustermann (~> 3.0)
+      rack (~> 2.2, >= 2.2.4)
+      rack-protection (= 3.2.0)
+      tilt (~> 2.0)
+    sysvmq (0.2.3)
+    tilt (2.3.0)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  bindata (~> 2.4)
+  httparty (~> 0.19)
+  ipaddr (~> 1.2.5)
+  puma (~> 6.0)
+  rb_tuntap (~> 0.2.1)!
+  sinatra (~> 3.0)
+  sysvmq (~> 0.2)
+
+BUNDLED WITH
+   2.5.9

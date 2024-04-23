@@ -3,7 +3,7 @@ require 'digest'
 require 'json'
 
 module TunMesh
-  class NamedPipe
+  class IPC
     class Packet < BinData::Record
       endian :big
 

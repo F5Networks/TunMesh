@@ -25,6 +25,11 @@ module TunMesh
                      payload: payload)
       end
 
+      def transmit_packet(packet:)
+        return _post(path: 'tunmesh/control/v0/packet/rx',
+                     payload: packet)
+      end
+
       private
 
       def _post(path:, payload:)

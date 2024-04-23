@@ -26,17 +26,12 @@ module TunMesh
     end
 
     def tun_device_name
-      @config.fetch('internal').fetch('tun_device_name')
+      @config.fetch('internal').fetch('tun_device_name', 'tun1')
     end
 
-    # tunnel inbound
-    def tun_read_pipe_path
-      @config.fetch('ipc').fetch('read_pipe_path')
-    end
-
-    # Tunnel outbound
-    def tun_write_pipe_path
-      @config.fetch('ipc').fetch('write_pipe_path')
+    # TODO: Make automatic
+    def ipc_queue_id
+      @config.fetch('ipc', {}).fetch('queue_id', 0x544e4d00)
     end
   end
 

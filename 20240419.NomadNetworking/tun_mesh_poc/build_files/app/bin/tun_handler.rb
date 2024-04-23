@@ -2,6 +2,7 @@
 # tun_handler: This program sets up the tun device and forwards all traffic to named pipes
 # Requires access to the /dev/tun device, cap_net_admin, and cap_net_raw
 # Minimal: Performs only the minimum abount of processing due to the high privilege level needed
+# TODO: Can we clean up if we Process::UID.change_privilege()?
 
 require 'logger'
 require 'pathname'
@@ -9,6 +10,8 @@ require 'rb_tuntap'
 
 require './lib/tun_mesh/config'
 require './lib/tun_mesh/control_plane/structs/net_address'
+require './lib/tun_mesh/ipc/packet'
+require './lib/tun_mesh/ipc/queue_manager'
 
 def open_tunnel(logger:)
   begin
@@ -35,36 +38,34 @@ def open_tunnel(logger:)
   end
 end
 
-def process_traffic(logger:, tun:)
+def process_traffic(logger:, queue_manager:, tun:)
   write_thread = Thread.new do
-    # Tunnel write is pipe -> tunnel
-    TunMesh::NamedPipe.new(init_pipe: false, path: TunMesh::CONFIG.tun_write_pipe_path).read_loop do |packet|
+    loop do
+      packet = queue_manager.tun_write.pop
+      logger.debug { "Writing #{packet.md5} #{packet.data_length}b" }
       tun.to_io.write(packet.data)
     end      
   end
 
-  # Tunnel read pipe is tunnel -> pipe
-  TunMesh::NamedPipe.new(init_pipe: false, path: TunMesh::CONFIG.tun_read_pipe_path).write_loop do
-    if write_thread.alive?
-      # Read the mtu as this is a packet interface
-      tun.to_io.sysread(tun.mtu)
-    else
-      # Exit if the write_thread is dead
-      @logger.warn("Write thread dead, exiting reader")
-      nil
-    end
+  while write_thread.alive?
+    raw_data = tun.to_io.sysread(tun.mtu)
+    packet = TunMesh::IPC::Packet.new(data: raw_data)
+    logger.debug { "Read #{packet.md5} #{packet.data_length}b" }
+    queue_manager.tun_read.push(packet)
   end
 
-  @logger.debug("process_traffic() exiting")
+  logger.debug("process_traffic() exiting")
 end
 
 def main
   logger = Logger.new(STDERR, progname: 'tun_handler')
+  queue_manager = TunMesh::IPC::QueueManager.new(control: false) # Control = false: Queues are expected to exist
+
   open_tunnel(logger: logger) do |tun|
     loop do
-      process_traffic(logger: logger, tun: tun)
+      process_traffic(logger: logger, queue_manager: queue_manager, tun: tun)
 
-      @logger.warn("process_traffic() exited")
+      logger.warn("process_traffic() exited")
       sleep(1)
     end
   end

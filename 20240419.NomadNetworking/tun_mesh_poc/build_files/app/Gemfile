@@ -1,0 +1,20 @@
+source 'https://rubygems.org'
+
+# TODO: PRs were accepted, which version now?
+gem 'rb_tuntap', '~> 0.2.1', git: 'https://github.com/TJNII/rb_tuntap.git'
+
+gem 'bindata', '~> 2.4'
+gem 'ipaddr', '~> 1.2.5'
+
+gem 'sysvmq', '~> 0.2'
+
+gem 'httparty', '~> 0.19'
+# TODO
+#gem 'persistent_http', '~> 2.0'
+
+# TODO
+# Prometheus/API dependencies
+#gem 'prometheus-client', '~> 4.0'
+
+gem 'puma', '~> 6.0'
+gem 'sinatra', '~> 3.0'

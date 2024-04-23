@@ -37,6 +37,10 @@ module TunMesh
           registration.stamp
         end
 
+        def transmit_packet(packet:)
+          client.transmit_packet(packet: packet)
+        end
+
         def update_registration(new_registration)
           raise(ArgumentError, "new_registration not a Structs::Registration, got #{new_registration.class}") unless new_registration.is_a?(Structs::Registration)
           raise("ID Mismatch #{registration.local.id} / #{new_registration.local.id}") if registration.local.id != new_registration.local.id
