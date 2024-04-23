@@ -16,7 +16,7 @@ module TunMesh
         # Hook in the destructor to clean up, if we created the queue
         ObjectSpace.define_finalizer(self, self.class.finalize(@mq)) if create
       rescue StandardError => exc
-        raise(exc.class, "Failed to init queue #{queue_id}: #{exc}")
+        raise(exc.class, "Failed to init queue #{queue_id.to_s(16)}: #{exc}")
       end
 
       def self.finalize(mq)

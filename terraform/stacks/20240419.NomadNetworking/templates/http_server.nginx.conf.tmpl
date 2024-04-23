@@ -1,0 +1,23 @@
+# This file is templated by the Nomad template
+user  nginx;
+worker_processes  5;
+
+error_log  /var/log/nginx/error.log warn;
+pid    /var/run/nginx.pid;
+
+env TZ=UTC;
+
+events {
+  worker_connections  1024;
+}
+
+http {
+  server {
+    listen 80;
+
+    location / {
+      add_header Content-Type text/plain;
+      return 200 "Hello from alloc {{ env "NOMAD_ALLOC_INDEX" }}";
+    }
+  }
+}

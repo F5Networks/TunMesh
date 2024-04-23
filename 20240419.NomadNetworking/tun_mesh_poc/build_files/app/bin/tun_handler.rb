@@ -8,7 +8,8 @@ require 'logger'
 require 'pathname'
 require 'rb_tuntap'
 
-require './lib/tun_mesh/config'
+require './lib/tun_mesh/config' # TODO: Get config from the API so they can't drift
+                                # TODO: Or just merge the processes (This is the right answer)
 require './lib/tun_mesh/control_plane/structs/net_address'
 require './lib/tun_mesh/ipc/packet'
 require './lib/tun_mesh/ipc/queue_manager'
