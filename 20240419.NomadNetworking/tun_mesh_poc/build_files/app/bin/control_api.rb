@@ -10,6 +10,17 @@ control_plane_manager = TunMesh::ControlPlane::Manager.new
 
 set :port, TunMesh::CONFIG.control_listen_port
 
+post '/tunmesh/control/v0/packet/rx' do
+  if env['CONTENT_TYPE'] == 'application/json'
+    registration = control_plane_manager.rx_packet(request.body.read)
+    status 204
+  else
+    status 400
+    content_type 'text/plain'
+    body "Invalid content type #{env['CONTENT_TYPE']}"
+  end
+end
+
 post '/tunmesh/control/v0/registrations/register' do
   if env['CONTENT_TYPE'] == 'application/json'
     begin
@@ -25,7 +36,6 @@ post '/tunmesh/control/v0/registrations/register' do
       body "Registration to self"
     end
   else
-    puts "WAHUH: #{env['CONTENT_TYPE']} / #{env}"
     status 400
     content_type 'text/plain'
     body "Invalid content type #{env['CONTENT_TYPE']}"

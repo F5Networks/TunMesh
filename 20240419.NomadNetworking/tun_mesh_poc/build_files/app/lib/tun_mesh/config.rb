@@ -20,8 +20,23 @@ module TunMesh
       @config.fetch('control').fetch('listen_port', 4567)
     end
 
+    # TODO: internal: bad namespace
     def private_address_cidr
       @config.fetch('internal').fetch('private_address_cidr')
+    end
+
+    def tun_device_name
+      @config.fetch('internal').fetch('tun_device_name')
+    end
+
+    # tunnel inbound
+    def tun_read_pipe_path
+      @config.fetch('ipc').fetch('read_pipe_path')
+    end
+
+    # Tunnel outbound
+    def tun_write_pipe_path
+      @config.fetch('ipc').fetch('write_pipe_path')
     end
   end
 

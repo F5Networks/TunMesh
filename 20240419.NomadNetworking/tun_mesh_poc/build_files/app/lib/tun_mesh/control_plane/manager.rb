@@ -25,7 +25,16 @@ module TunMesh
         TunMesh::CONFIG.bootstrap_node_urls.each do |node_url|
           @registrations.bootstrap_node(remote_url: node_url)
         end
+
+        @router = TunMesh::VPN::Router.new(manager: self)
       end
-    end  
+
+      def transmit_packet(dest_addr:, packet:)
+      end
+
+      
+      private
+    end
+    
   end
 end
