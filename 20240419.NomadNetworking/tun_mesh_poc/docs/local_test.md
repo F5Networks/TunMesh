@@ -8,32 +8,16 @@ Control Plane
 - Each instance needs a unique config
 -- examples in `etc/test_config`
 
-### Control 1
+### Tunnel 1
 
 ```
-docker build . && docker run --rm -ti --name=control1 --ipc=shareable -v $(pwd)/etc/test_config:/etc/tunmesh:ro -e TUNMESH_CONFIG_PATH=/etc/tunmesh/config.1.yaml -p 4567:4567 $(docker build -q .) bundle exec ./bin/control_api.rb
+docker build . && docker run --rm -ti --name=tm1 --device=/dev/net/tun --cap-add=cap_net_admin --cap-add=cap_net_raw -v $(pwd)/etc/test_config:/etc/tunmesh:ro -e TUNMESH_CONFIG_PATH=/etc/tunmesh/config.1.yaml -p 4567:4567 $(docker build -q .)
 ```
 
-### Control 2
+### Tunnel 2
 
 - Note NAT
 
 ```
-docker build . && docker run --rm -ti --name=control2 --ipc=shareable -v $(pwd)/etc/test_config:/etc/tunmesh:ro -e TUNMESH_CONFIG_PATH=/etc/tunmesh/config.2.yaml -p 4568:4567 $(docker build -q .) bundle exec ./bin/control_api.rb
+docker build . && docker run --rm -ti --name=tm2 --device=/dev/net/tun --cap-add=cap_net_admin --cap-add=cap_net_raw -v $(pwd)/etc/test_config:/etc/tunmesh:ro -e TUNMESH_CONFIG_PATH=/etc/tunmesh/config.2.yaml -p 4568:4567 $(docker build -q .)
 ```
-
-Tun
----
-
-### Tun1
-
-```
-docker build . && docker run --rm -ti -u 0:0 --name=tun1 --ipc=container:control1 --device=/dev/net/tun --cap-add=cap_net_admin --cap-add=cap_net_raw -v $(pwd)/etc/test_config/config.1.yaml:/etc/tunmesh/config.yaml:ro $(docker build -q .) bundle exec bin/tun_handler.rb
-```
-
-### Tun2
-
-```
-docker build . && docker run --rm -ti -u 0:0 --name=tun2 --ipc=container:control2 --device=/dev/net/tun --cap-add=cap_net_admin --cap-add=cap_net_raw -v $(pwd)/etc/test_config/config.2.yaml:/etc/tunmesh/config.yaml:ro $(docker build -q .) bundle exec bin/tun_handler.rb
-```
-
