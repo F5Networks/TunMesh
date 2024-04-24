@@ -6,17 +6,11 @@ require_relative 'packets/ipv4/packet'
 module TunMesh
   module VPN
     class Router
-      def initialize(manager:)
+      def initialize(manager:, queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
         @manager = manager
 
-        @queue_manager = TunMesh::IPC::QueueManager.new(control: true)
-        
-        # Open the tun queues immediately, the tun process can't start without them.
-        @queue_manager.tun_read
-        @queue_manager.tun_write
-        @queue_manager.tun_heartbeat
-
+        @queue_manager = TunMesh::IPC::QueueManager.new(queue_key: queue_key)
         @last_tun_heartbeat = 0
 
         _read_pipe_thread

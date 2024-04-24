@@ -1,15 +1,23 @@
 #!/usr/bin/env ruby
 
 require './lib/tun_mesh/control_plane/manager'
+require './lib/tun_mesh/ipc/queue_manager'
 require './lib/tun_mesh/vpn/tun_handler'
 
-manager = TunMesh::ControlPlane::Manager.new
+queue_manager = TunMesh::IPC::QueueManager.new(control: true)
 
-fork do
-  Process::UID.change_privilege(100010) # TODO: hardcode
-  manager.run_api!
+begin
+  fork do
+    Process::UID.change_privilege(100010) # TODO: hardcode
+    manager = TunMesh::ControlPlane::Manager.new(queue_key: queue_manager.queue_key)
+    manager.run_api!
+  end
+
+  fork do
+    tun_handler = TunMesh::VPN::TunHandler.new(queue_key: queue_manager.queue_key)
+    tun_handler.run!
+  end
+ensure
+  Process.wait
+  queue_manager.close
 end
-
-fork { TunMesh::VPN::TunHandler.new.run! }
-
-Process.wait

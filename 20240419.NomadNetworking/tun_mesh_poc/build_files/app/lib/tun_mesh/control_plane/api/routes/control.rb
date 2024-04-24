@@ -40,6 +40,11 @@ module TunMesh
             end
           end
           
+          get '/tunmesh/control/v0/registrations/routes' do
+            # TODO: Name
+            json settings.manager.registrations.nodes_by_address
+          end
+
           private
 
           def self._ensure_auth(context)

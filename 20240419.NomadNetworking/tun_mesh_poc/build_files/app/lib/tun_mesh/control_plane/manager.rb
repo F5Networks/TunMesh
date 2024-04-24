@@ -14,7 +14,7 @@ module TunMesh
     class Manager
       attr_reader :api_auth, :id, :registrations, :router, :self_node_info
       
-      def initialize
+      def initialize(queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
         @id = SecureRandom.uuid
 
@@ -30,7 +30,7 @@ module TunMesh
           @registrations.bootstrap_node(remote_url: node_url)
         end
 
-        @router = TunMesh::VPN::Router.new(manager: self)
+        @router = TunMesh::VPN::Router.new(manager: self, queue_key: queue_key)
 
         @tx_queue = Queue.new
         @tx_workers = Hash.new { |h,k| h[k] = _new_tx_worker(id: k) }
@@ -74,6 +74,7 @@ module TunMesh
     
       def _transmit_packet(dest_addr:, packet:)
         remote_node = @registrations.nodes_by_address[dest_addr]
+        
         if remote_node.nil?
           @logger.warn { "Dropping packet #{packet.id}: Destination #{dest_addr} unknown" }
           return

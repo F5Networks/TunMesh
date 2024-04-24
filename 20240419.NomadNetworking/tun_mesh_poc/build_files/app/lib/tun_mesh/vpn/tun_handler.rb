@@ -9,21 +9,9 @@ require './lib/tun_mesh/ipc/queue_manager'
 module TunMesh
   module VPN
     class TunHandler
-      def initialize
+      def initialize(queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
-      end
-
-      def queue_manager
-        return @queue_manager if @queue_manager
-        
-        @queue_manager = TunMesh::IPC::QueueManager.new(control: false) # Control = false: Queues are expected to exist
-        
-        # Ensure we can open the queue
-        @queue_manager.tun_read
-        @queue_manager.tun_write
-        @queue_manager.tun_heartbeat
-
-        return @queue_manager
+        @queue_manager = TunMesh::IPC::QueueManager.new(queue_key: queue_key)
       end
       
       def run!
@@ -73,7 +61,7 @@ module TunMesh
         threads.push(Thread.new do
                        loop do
                          begin
-                           packet = TunMesh::IPC::Packet.decode(queue_manager.tun_write.pop)
+                           packet = TunMesh::IPC::Packet.decode(@queue_manager.tun_write.pop)
                            @logger.debug { "Writing #{packet.id}: #{packet.data_length}b, #{Time.now.to_f - packet.stamp}s old" }
                            tun.to_io.write(packet.data)
                            tun.to_io.flush
@@ -89,7 +77,7 @@ module TunMesh
                          packet = TunMesh::IPC::Packet.new(data: raw_data)
                          packet.stamp = Time.now.to_f
                          @logger.debug { "Read #{packet.id} #{packet.data_length}b" }
-                         queue_manager.tun_read.push(packet.encode)
+                         @queue_manager.tun_read.push(packet.encode)
                        rescue StandardError => exc
                          @logger.warn { "Failed to read tun device: #{exc.class}: #{exc}" }
                        end
@@ -97,7 +85,7 @@ module TunMesh
 
         loop do
           break unless threads.map(&:alive?).all?
-          queue_manager.tun_heartbeat.push(Time.now.to_f)
+          @queue_manager.tun_heartbeat.push(Time.now.to_f)
           sleep(1) # TODO: Hardcode
         end
 

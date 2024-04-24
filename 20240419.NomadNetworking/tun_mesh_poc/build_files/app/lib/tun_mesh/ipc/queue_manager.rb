@@ -1,3 +1,4 @@
+require 'logger'
 require './lib/tun_mesh/config'
 require_relative 'queue'
 
@@ -16,21 +17,53 @@ module TunMesh
         # 0x03 - 0x0f available
       }.freeze
 
-      QUEUE_FULL_IDS = QUEUE_SUB_IDS.transform_values { |sub_id| TunMesh::CONFIG.ipc_queue_id | sub_id }.freeze
-
-      QUEUE_FULL_IDS.each_key do |queue_name|
+      QUEUE_SUB_IDS.each_key do |queue_name|
         define_method(queue_name) { @queues[queue_name] }
       end
 
-      def initialize(control:)
-        raise("CONFIG ERROR: The last 4 bits of the IPC Queue ID are reserved") if (TunMesh::CONFIG.ipc_queue_id & 0x0f) != 0
+      attr_reader :queue_key
+
+      def initialize(control: false, queue_key: nil)
+        raise(ArgumentError, "Control and queue_key are exclusive") if control && queue_key
+        raise(ArgumentError, "queue_key must be specified when not in control") if !control && !queue_key
         @control = control
 
-        # Storing the queues in a hash because ... it's easy.
-        @queues = Hash.new do |h,k|
-          h[k] = Queue.new(queue_id: QUEUE_FULL_IDS.fetch(k), buffer_size: 2048, create: @control)
+        if queue_key
+          raise("CONFIG ERROR: The last 4 bits of the IPC Queue ID are reserved") if (queue_key & 0x0f) != 0
+          @queue_key = queue_key
         end
+
+        logger = Logger.new(STDERR, progname: self.class.to_s)
+
+        retries = 0
+        begin
+          @queue_key = (rand(0x80000000..0xf0fffff0) & 0xfffffff0) if @control # TODO: Hardcode magic values
+          _init_queues
+        rescue StandardError => exc
+          logger.info("Failed to init with queue_key #{@queue_key.to_s(16)}: Attempt #{retries}: #{exc.class}: #{exc}") if @control
+          
+          raise exc unless @control
+          raise exc if retries > 3 # TODO: Hardcoded count
+
+          retries += 1
+          retry
+        end
+
+        logger.debug("Successfully initialized with queue_key #{@queue_key.to_s(16)}")
       end
+
+      def close
+        @queues.each(&:close)
+      end
+
+      private
+      
+      def _init_queues
+        # Storing the queues in a hash because ... it's easy.
+        @queues = QUEUE_SUB_IDS.transform_values do |sub_id|
+          Queue.new(queue_id: (queue_key | sub_id), buffer_size: 2048, create: @control)
+        end
+      end        
     end
   end
 end
