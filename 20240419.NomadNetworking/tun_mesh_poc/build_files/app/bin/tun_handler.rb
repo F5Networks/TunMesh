@@ -47,7 +47,7 @@ def process_traffic(logger:, queue_manager:, tun:)
   threads.push(Thread.new do
                  loop do
                    begin
-                     packet = TunMesh::IPC::Packet.from_json(queue_manager.tun_write.pop)
+                     packet = TunMesh::IPC::Packet.decode(queue_manager.tun_write.pop)
                      logger.debug { "Writing #{packet.id}: #{packet.data_length}b, #{Time.now.to_f - packet.stamp}s old" }
                      tun.to_io.write(packet.data)
                      tun.to_io.flush
@@ -63,7 +63,7 @@ def process_traffic(logger:, queue_manager:, tun:)
       packet = TunMesh::IPC::Packet.new(data: raw_data)
       packet.stamp = Time.now.to_f
       logger.debug { "Read #{packet.id} #{packet.data_length}b" }
-      queue_manager.tun_read.push(packet.to_json)
+      queue_manager.tun_read.push(packet.encode)
     rescue StandardError => exc
       logger.warn { "Failed to read tun device: #{exc.class}: #{exc}" }
     end

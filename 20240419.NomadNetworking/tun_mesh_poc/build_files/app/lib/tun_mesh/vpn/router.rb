@@ -72,7 +72,7 @@ module TunMesh
         @read_pipe_thread ||= Thread.new do
           loop do
             begin
-              packet = TunMesh::IPC::Packet.from_json(@queue_manager.tun_read.pop)
+              packet = TunMesh::IPC::Packet.decode(@queue_manager.tun_read.pop)
               _rx_packet(packet: packet, source: :local)
             rescue StandardError => exc
               @logger.error("Failed to process packet from tun_read queue: #{exc.class}: #{exc}")
@@ -114,7 +114,7 @@ module TunMesh
           return
         end
 
-        @queue_manager.tun_write.push(packet.to_json)
+        @queue_manager.tun_write.push(packet.encode)
       end
 
       def _rx_packet(packet:, source:)
