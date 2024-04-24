@@ -34,10 +34,20 @@ module TunMesh
 
         @tx_queue = Queue.new
         @tx_workers = Hash.new { |h,k| h[k] = _new_tx_worker(id: k) }
+        @worker_pool_healthy = false
 
         _worker_manager
       end
 
+      def health
+        _health_sub_targets.transform_values(&:health).merge({manager: _health})
+      end
+      
+      def healthy?
+        return false unless _health.values.all?
+        return _health_sub_targets.transform_values(&:healthy?).values.all?
+      end
+      
       def receive_packet(**kwargs)
         @router.rx_remote_packet(**kwargs)
       end
@@ -53,6 +63,20 @@ module TunMesh
       end
 
       private
+
+      def _health
+        return {
+          worker_pool_manager: _worker_manager.alive?,
+          worker_pool: @worker_pool_healthy
+        }
+      end
+
+      def _health_sub_targets
+        return {
+          registrations: @registrations,
+          router: @router
+        }
+      end
 
       def _new_tx_worker(id:)
         Thread.new do
@@ -85,6 +109,7 @@ module TunMesh
       end
       
       def _worker_manager
+        @worker_manager = nil unless @worker_manager&.alive?
         @worker_manager ||= Thread.new do
           desired_workers = 0
           loop do
@@ -97,21 +122,26 @@ module TunMesh
               # TODO: hardcode
               if @tx_workers.length > 10
                 @logger.warn("#{log_prefix}: Max threads reached")
+                @worker_pool_healthy = false
               else
                 @logger.debug("#{log_prefix}: Adding a worker")
                 @tx_workers[SecureRandom.uuid]
+                @worker_pool_healthy = true
               end
             elsif @tx_queue.num_waiting > 1
               sleeping_workers = @tx_workers.select { |_, t| t.status == "sleep" }
               if sleeping_workers.length < 1
                 @logger.warn("#{log_prefix}: No sleeping thread to remove")
+                @worker_pool_healthy = false
               else
                 target = sleeping_workers.keys.sample
                 @logger.debug("#{log_prefix}: Removing worker #{target}")
                 @tx_workers.delete(target)
+                @worker_pool_healthy = true
               end
             else
               @logger.debug(log_prefix)
+              @worker_pool_healthy = true
             end
 
             # TODO: Hardcode / very slow

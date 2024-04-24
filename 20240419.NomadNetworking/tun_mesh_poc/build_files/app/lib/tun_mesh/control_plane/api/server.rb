@@ -1,12 +1,14 @@
 require 'sinatra/base'
 require './lib/tun_mesh/config'
 require_relative 'routes/control'
+require_relative 'routes/health'
 
 module TunMesh
   module ControlPlane
     module API
       class Server < Sinatra::Base
         register Routes::Control
+        register Routes::Health
         
         def self.run!(**args)
           _set_route_args(args: args, route: Routes::Control)

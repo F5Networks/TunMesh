@@ -22,6 +22,17 @@ module TunMesh
         @logger.debug { exc.backtrace }
       end
 
+      def health
+        {
+          registered: !@remote_nodes.empty?,
+          worker: worker.alive?,
+        }
+      end
+
+      def healthy?
+        health.values.all?
+      end
+      
       def outbound_registration_payload
         Structs::Registration.new(
             local: @manager.self_node_info,
@@ -54,6 +65,7 @@ module TunMesh
       end
 
       def worker
+        @worker = nil unless @worker&.alive?
         @worker ||= Thread.new do
           loop do
             # TODO: Hardcode / slow
