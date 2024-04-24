@@ -93,6 +93,7 @@ def main
   queue_manager.tun_heartbeat
   
   open_tunnel(logger: logger) do |tun|
+    Process::UID.change_privilege(100010)
     loop do
       process_traffic(logger: logger, queue_manager: queue_manager, tun: tun)
 
