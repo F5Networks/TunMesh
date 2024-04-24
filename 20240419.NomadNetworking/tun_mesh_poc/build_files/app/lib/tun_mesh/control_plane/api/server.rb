@@ -9,6 +9,11 @@ module TunMesh
       class Server < Sinatra::Base
         register Routes::Control
         register Routes::Health
+
+        not_found do
+          status 404
+          body "Not Found"
+        end
         
         def self.run!(**args)
           _set_route_args(args: args, route: Routes::Control)
