@@ -1,10 +1,15 @@
 ---
 control:
-  advertise_url: http://192.168.128.1:4567
+  advertise_url: https://192.168.128.1:4567
+  ssl:
+    cert_file_path: /etc/tunmesh/test_ssl/cert.pem
+    key_file_path: /etc/tunmesh/test_ssl/key.pem
+  auth:
+    secret: bih0ohBoh4quib4apiehang6ohcahh9yo7eiw9ha
 
 discovery:
   bootstrap_node_urls:
-    - http://192.168.128.1:4568
+    - https://192.168.128.1:4568
 
 internal:
   private_address_cidr: 192.168.129.10/24
