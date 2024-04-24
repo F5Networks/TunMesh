@@ -16,8 +16,21 @@ module TunMesh
       @config.fetch('discovery').fetch('bootstrap_node_urls')
     end
 
+    # TODO: API auth secret
+    def control_auth_secret
+      @config.fetch('control').fetch('auth').fetch('secret')
+    end
+
     def control_listen_port
       @config.fetch('control').fetch('listen_port', 4567)
+    end
+
+    def control_ssl_cert_file_path
+      @config.fetch('control').fetch('ssl').fetch('cert_file_path')
+    end
+
+    def control_ssl_key_file_path
+      @config.fetch('control').fetch('ssl').fetch('key_file_path')
     end
 
     # TODO: internal: bad namespace

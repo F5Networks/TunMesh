@@ -1,4 +1,4 @@
-require_relative '../api_client'
+require_relative '../api/client'
 require_relative '../structs/registration'
 
 module TunMesh
@@ -7,12 +7,13 @@ module TunMesh
       class RemoteNode
         attr_reader :registration
         
-        def initialize(registration:)
+        def initialize(manager:, registration:)
+          @manager = manager
           @registration = registration
         end
 
         def client
-          @client ||= APIClient.new(remote_url: registration.local.listen_url)
+          @client ||= API::Client.new(manager: @manager, remote_url: registration.local.listen_url)
         end
 
         def node_info

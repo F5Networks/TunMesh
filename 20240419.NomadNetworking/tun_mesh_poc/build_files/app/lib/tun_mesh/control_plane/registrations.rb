@@ -1,4 +1,4 @@
-require_relative 'api_client'
+require_relative 'api/client'
 require_relative 'structs/registration'
 require_relative 'registrations/errors'
 require_relative 'registrations/remote_node'
@@ -15,10 +15,11 @@ module TunMesh
       end
 
       def bootstrap_node(remote_url:)
-        registration = _register(client: APIClient.new(remote_url: remote_url))
-        @remote_nodes[registration.local.id] = RemoteNode.new(registration: registration)
+        registration = _register(client: API::Client.new(manager: @manager, remote_url: remote_url))
+        @remote_nodes[registration.local.id] = RemoteNode.new(manager: @manager, registration: registration)
       rescue StandardError => exc
         @logger.warn("Failed to bootstrap node at #{remote_url}: #{exc.class}: #{exc}")
+        @logger.debug { exc.backtrace }
       end
 
       def outbound_registration_payload
@@ -91,7 +92,7 @@ module TunMesh
         if @remote_nodes.key?(id)
           @remote_nodes[id].update_registration(registration)
         else
-          @remote_nodes[registration.local.id] = RemoteNode.new(registration: registration)
+          @remote_nodes[registration.local.id] = RemoteNode.new(manager: @manager, registration: registration)
         end
       end
 

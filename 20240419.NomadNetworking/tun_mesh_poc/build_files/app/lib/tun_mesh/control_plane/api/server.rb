@@ -11,8 +11,13 @@ module TunMesh
         def self.run!(**args)
           _set_route_args(args: args, route: Routes::Control)
 
-          Sinatra::Base.set(:bind, '0.0.0.0')
-          Sinatra::Base.set(:port, TunMesh::CONFIG.control_listen_port)
+          # https://puma.io/puma/
+          puma_bind = [
+            "ssl://0.0.0.0:", TunMesh::CONFIG.control_listen_port,
+            "?key=", TunMesh::CONFIG.control_ssl_key_file_path,
+            "&cert=", TunMesh::CONFIG.control_ssl_cert_file_path
+          ]
+          Sinatra::Base.set(:bind, puma_bind.join)
 
           super
         end

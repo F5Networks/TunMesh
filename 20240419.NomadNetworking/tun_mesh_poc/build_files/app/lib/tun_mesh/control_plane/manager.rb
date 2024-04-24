@@ -4,6 +4,7 @@ require 'securerandom'
 require './lib/tun_mesh/config'
 require './lib/tun_mesh/vpn/router'
 require_relative 'api/server'
+require_relative 'auth'
 require_relative 'registrations'
 require_relative 'structs/net_address'
 require_relative 'structs/node_info'
@@ -11,12 +12,13 @@ require_relative 'structs/node_info'
 module TunMesh
   module ControlPlane
     class Manager
-      attr_reader :id, :registrations, :router, :self_node_info
+      attr_reader :api_auth, :id, :registrations, :router, :self_node_info
       
       def initialize
         @logger = Logger.new(STDERR, progname: self.class.to_s)
         @id = SecureRandom.uuid
 
+        @api_auth = Auth.new(manager: self, secret: TunMesh::CONFIG.control_auth_secret)
         @registrations = Registrations.new(manager: self)
         @self_node_info = Structs::NodeInfo.new(
           id: @id,
