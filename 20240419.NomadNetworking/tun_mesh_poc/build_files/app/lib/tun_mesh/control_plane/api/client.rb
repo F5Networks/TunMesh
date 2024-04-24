@@ -32,7 +32,7 @@ module TunMesh
         end
 
         def transmit_packet(packet:)
-          raise(ArgumentError, "Payload must be a TunMesh::IPC::Packet, got #{payload.class}") unless payload.is_a? TunMesh::IPC::Packet
+          raise(ArgumentError, "Packet must be a TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
           return _post(path: 'tunmesh/control/v0/packet/rx',
                        payload: packet)
         end
