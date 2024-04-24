@@ -37,6 +37,14 @@ module TunMesh
           registration.stamp
         end
 
+        def to_json(*args, **kwargs)
+          {
+            node_info: node_info,
+            stamp: stamp,
+            stale: stale?
+          }.to_json(*args, **kwargs)
+        end
+
         def transmit_packet(packet:)
           client.transmit_packet(packet: packet)
         end

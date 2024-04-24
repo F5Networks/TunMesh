@@ -48,6 +48,10 @@ module TunMesh
         @remote_nodes.values.map { |rn| [rn.node_info.private_address.address, rn] }.to_h
       end
 
+      def to_json(*args, **kwargs)
+        @remote_nodes.to_json(*args, **kwargs)
+      end
+
       def worker
         @worker ||= Thread.new do
           loop do

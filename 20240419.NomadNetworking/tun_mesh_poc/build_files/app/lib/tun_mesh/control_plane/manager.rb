@@ -3,6 +3,7 @@ require 'securerandom'
 
 require './lib/tun_mesh/config'
 require './lib/tun_mesh/vpn/router'
+require_relative 'api/server'
 require_relative 'registrations'
 require_relative 'structs/net_address'
 require_relative 'structs/node_info'
@@ -39,6 +40,12 @@ module TunMesh
         @router.rx_remote_packet(**kwargs)
       end
 
+      def run_api!
+        API::Server.run!(
+          manager: self
+        )
+      end
+      
       def transmit_packet(**kwargs)
         @tx_queue.push(kwargs)
       end
