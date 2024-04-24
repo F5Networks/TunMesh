@@ -113,13 +113,11 @@ module TunMesh
 
         remote_node.remotes.each do |remote_node_info|
           next if remote_node_info.id == @manager.id
-          
-          if @remote_nodes.key?(remote_node_info.id)
-            _update_registration(id: remote_node_info.id)
-          else
-            @logger.info("Bootstrapping remote node #{remote_node_info.id} at #{remote_node_info.listen_url}, via #{id}")
-            bootstrap_node(remote_url: remote_node_info.listen_url)
-          end
+          # If the node is in the @remote_nodes list it will be handled by the outer loop
+          next @remote_nodes.key?(remote_node_info.id)
+
+          @logger.info("Bootstrapping remote node #{remote_node_info.id} at #{remote_node_info.listen_url}, via #{id}")
+          bootstrap_node(remote_url: remote_node_info.listen_url)
         end
       end
     end
