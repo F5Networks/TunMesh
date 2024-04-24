@@ -3,8 +3,7 @@ require 'sysvmq'
 module TunMesh
   class IPC
     class Queue
-      # TODO: Opening 666
-      def initialize(queue_id:, buffer_size: 2048, create: false, mode: 0o0666)
+      def initialize(queue_id:, buffer_size: 2048, create: false, mode: 0o0660)
         flags = mode
         flags |= (SysVMQ::IPC_CREAT | SysVMQ::IPC_EXCL) if create == true
         

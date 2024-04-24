@@ -37,4 +37,4 @@ WORKDIR /app
 RUN bundle install
 
 COPY build_files/ /
-USER tunmesh
+CMD ["bundle", "exec", "./bin/tun_mesh"]

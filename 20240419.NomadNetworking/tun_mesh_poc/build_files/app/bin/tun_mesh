@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+
+require './lib/tun_mesh/control_plane/manager'
+require './lib/tun_mesh/vpn/tun_handler'
+
+manager = TunMesh::ControlPlane::Manager.new
+
+fork do
+  Process::UID.change_privilege(100010) # TODO: hardcode
+  manager.run_api!
+end
+
+fork { TunMesh::VPN::TunHandler.new.run! }
+
+Process.wait
