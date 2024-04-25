@@ -1,7 +1,7 @@
 require_relative 'api/client'
 require_relative 'structs/registration'
 require_relative 'registrations/errors'
-require_relative 'registrations/remote_node'
+require_relative 'registrations/remote_node_pool'
 
 module TunMesh
   module ControlPlane
@@ -10,16 +10,13 @@ module TunMesh
         @logger = Logger.new(STDERR, progname: self.class.to_s)
         @manager = manager
         
-        @remote_nodes = {}
-        @node_ids_by_address = {}
-        @node_ids_by_address_lock = Mutex.new
+        @remote_nodes = RemoteNodePool.new(manager: @manager)
 
         worker
       end
 
       def bootstrap_node(remote_url:)
-        registration = _register(client: API::Client.new(manager: @manager, remote_url: remote_url))
-        @remote_nodes[registration.local.id] = RemoteNode.new(manager: @manager, registration: registration)
+        _register(api_client: API::Client.new(manager: @manager, remote_url: remote_url))
       rescue StandardError => exc
         @logger.warn("Failed to bootstrap node at #{remote_url}: #{exc.class}: #{exc}")
         @logger.debug { exc.backtrace }
@@ -38,35 +35,41 @@ module TunMesh
       
       def outbound_registration_payload
         Structs::Registration.new(
-            local: @manager.self_node_info,
-            remote: @remote_nodes.values.map { |rn| rn.node_info },
-            stamp: Time.now.to_i
+          local: @manager.self_node_info,
+          remote: @remote_nodes.nodes.map { |rn| rn.node_info },
+          stamp: Time.now.to_i
         )
       end
       
-      def process_registration(raw)
-        registration = Structs::Registration.from_json(raw)
+      def process_registration(raw_payload:, remote_node_id:)
+        registration = Structs::Registration.from_json(raw_payload)
 
         # Protection against misrouted discovery registrations
         # Could be due to a badly templated config block, or using a load balancer for discovery
-        raise RegistrationFromSelf if registration.local.id == @manager.id
+        if registration.local.id == @manager.id
+          @logger.warn("Rejecting registration from self")
+          raise RegistrationFromSelf
+        end
+
+        if registration.local.id != remote_node_id
+          @logger.warn("Rejecting registration with mismatched ID. #{registration.local.id} : #{remote_node_id}")
+          raise RegistrationFailed
+        end
 
         age = Time.now.to_i - registration.stamp
         @logger.info("Received registration from #{registration.local.id} (#{age}s old)")
-        _store_registration(registration: registration)
+        @remote_nodes.register(registration: registration)
 
         return registration
       end
 
+      def node_by_address(address)
+        @remote_nodes.node_by_address(address)
+      end
+
       def nodes_by_address
-        return @nodes_by_address if @nodes_by_address
-
-        @node_ids_by_address_lock.synchronize do
-          @logger.debug("Regenerating nodes_by_address map")
-          @nodes_by_address = @node_ids_by_address.transform_values { |node_id| @remote_nodes[node_id] }.reject { |_, v| v.nil? }
-        end
-
-        return @nodes_by_address
+        # NOTE: Not locked in @remote_nodes.  Intended for debugging
+        return @remote_nodes.node_ids_by_address.transform_values { |id| @remote_nodes.node_by_id(id) }
       end
 
       def to_json(*args, **kwargs)
@@ -92,61 +95,25 @@ module TunMesh
           return
         end
 
-        # NOTE: each_key *NOT* safe here
-        @remote_nodes.keys.each { |id| _update_registration(id: id) }
-
-        @remote_nodes.delete_if do |node_id, node|
-          if node.stale?
-            @logger.warn("Removed stale node #{node_id}")
-            node.close
-            true
-          elsif node.healthy?
-            false
-          else
-            @logger.warn("Removed unhealthy node #{node_id}: #{node.health}")
-            node.close
-            true
-          end
-        end
+        @remote_nodes.ids.each { |id| _update_registration(id: id) }
+        @remote_nodes.groom!
       end
 
-      def _register(client:)
-        resp = client.register(payload: outbound_registration_payload)
-        return process_registration(resp)
-      end
-
-      def _store_registration(registration:)
-        if @remote_nodes.key?(registration.local.id)
-          @remote_nodes[registration.local.id].update_registration(registration)
-        else
-          @remote_nodes[registration.local.id] = RemoteNode.new(manager: @manager, registration: registration)
-        end
-
-        private_address = @remote_nodes[registration.local.id].node_info.private_address.address
-        @node_ids_by_address_lock.synchronize do
-          if @node_ids_by_address.key?(private_address)
-            return if @node_ids_by_address[private_address] == registration.local.id
-
-            @logger.warn("Replacing node #{@node_ids_by_address[private_address]} with #{registration.local.id} for #{private_address}")
-            @remote_nodes[@node_ids_by_address[private_address]]&.close
-          else
-            @logger.info("Storing node #{registration.local.id} for #{private_address}")
-          end
-
-          @node_ids_by_address[private_address] = registration.local.id
-          @nodes_by_address = nil
-        end
+      def _register(api_client:)
+        return process_registration(
+                 raw_payload: api_client.register(payload: outbound_registration_payload),
+                 remote_node_id: api_client.remote_id
+               )
       end
 
       def _update_registration(id:)
-        raise(ArgumentError, "Unknown remote node #{id}") unless @remote_nodes.key?(id)
-        
-        remote_node = @remote_nodes[id]
-      
+        remote_node = @remote_nodes.node_by_id(id)
+        raise(ArgumentError, "Unknown remote node #{id}") unless remote_node
+
         if remote_node.registration_required?
           @logger.info("Updating registration to #{id}")
           begin
-            _register(client: remote_node.client)
+            _register(api_client: remote_node.api_client)
           rescue StandardError => exc
             @logger.warn("Failed to register to node #{id}: #{exc.class}: #{exc}")
             return

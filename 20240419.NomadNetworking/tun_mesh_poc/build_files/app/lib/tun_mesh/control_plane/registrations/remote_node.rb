@@ -7,20 +7,32 @@ module TunMesh
   module ControlPlane
     class Registrations
       class RemoteNode
-        attr_reader :registration
+        attr_reader :api_client, :id, :registration
         
         def initialize(manager:, registration:)
           @manager = manager
-          @registration = registration
           @transmit_queue = Queue.new
+          @api_client = API::Client.new(manager: @manager, remote_id: registration.local.id, remote_url: registration.local.listen_url)
+          @registration = registration
+
+          @logger = Logger.new(STDERR, progname: "#{self.class}(#{id})")
         end
 
-        def client
-          @client ||= API::Client.new(manager: @manager, remote_url: registration.local.listen_url)
-        end
+        def api_session_auth
+          return @api_session_auth if @api_session_auth
+          raise("Remote ID unknown, cannot instantiate auth") unless id
 
+          @api_session_auth = Auth.new(
+            id: id,
+            manager: @manager,
+            secret: Auth.random_secret
+          )
+
+          return api_session_auth
+        end
+        
         def close
-          _logger.warn("Closing: Dropping #{@transmit_queue.length} messages") unless @transmit_queue.empty?
+          @logger.warn("Closing: Dropping #{@transmit_queue.length} messages") unless @transmit_queue.empty?
           @transmit_queue.close
           _transmit_worker.terminate
         end
@@ -43,11 +55,15 @@ module TunMesh
         end
 
         def id
-          @registration&.local&.id
+          @id ||= api_client.remote_id # This will get the ID if it is unknown
         end
 
         def node_info
-          @registration.local
+          registration.local
+        end
+
+        def private_address
+          node_info.private_address.address
         end
         
         def registration_required?
@@ -56,7 +72,7 @@ module TunMesh
         end
 
         def remotes
-          @registration.remote
+          registration.remote
         end
         
         def stale?
@@ -83,28 +99,20 @@ module TunMesh
 
         def update_registration(new_registration)
           raise(ArgumentError, "new_registration not a Structs::Registration, got #{new_registration.class}") unless new_registration.is_a?(Structs::Registration)
-          raise("ID Mismatch #{registration.local.id} / #{new_registration.local.id}") if registration.local.id != new_registration.local.id
+          @api_client = nil unless new_registration.local.listen_url == @api_client&.remote_url
 
-          @client = nil
+          raise("ID Mismatch #{id} / #{new_registration.local.id}") if id != new_registration.local.id
+          # Changing IPs is not supported.  This breaks a caching assumptions in RemoteNodePool
+          raise("Private address changed from #{private_address} to #{new_registration.local.private_address.address}") if private_address != new_registration.local.private_address.address
+
           @registration = new_registration
         end
 
         private
 
-        def _logger
-          return @logger if @logger
-          
-          if id
-            @logger = Logger.new(STDERR, progname: "#{self.class}(#{id})")
-            return @logger
-          else
-            return Logger.new(STDERR, progname: "#{self.class}([INITIALIZING])")
-          end
-        end
-        
         def _transmit_worker
           @transmit_worker ||= Thread.new do
-            _logger.debug("transmit_worker: Initialized")
+            @logger.debug("transmit_worker: Initialized")
             loop do
               break if @transmit_queue.closed?
 
@@ -117,19 +125,19 @@ module TunMesh
                 # TODO: Hardcode
                 packet_age = Time.now.to_f - packet.stamp
                 if packet_age > 10
-                  _logger.warn("Dropping packet #{packet.id}: Expired: #{packet_age}s old")
+                  @logger.warn("Dropping packet #{packet.id}: Expired: #{packet_age}s old")
                   next
                 end
                 
-                client.transmit_packet(packet: packet)
-                _logger.debug("Successfully transmitted #{packet.id}")
+                api_client.transmit_packet(packet: packet)
+                @logger.debug("Successfully transmitted #{packet.id}")
               rescue StandardError => exc
-                _logger.warn("transmit_worker: Iteration caught exception: #{exc.class}: #{exc}")
-                _logger.warn("Dropping packet #{packet.id}: Exception") if packet&.id
+                @logger.warn("transmit_worker: Iteration caught exception: #{exc.class}: #{exc}")
+                @logger.warn("Dropping packet #{packet.id}: Exception") if packet&.id
               end
             end
           ensure
-            _logger.debug("transmit_worker: Exiting")
+            @logger.debug("transmit_worker: Exiting")
             @transmit_queue.close
           end
         end

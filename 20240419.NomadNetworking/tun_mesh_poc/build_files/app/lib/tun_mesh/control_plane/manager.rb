@@ -18,7 +18,7 @@ module TunMesh
         @logger = Logger.new(STDERR, progname: self.class.to_s)
         @id = SecureRandom.uuid
 
-        @api_auth = Auth.new(manager: self, secret: TunMesh::CONFIG.control_auth_secret)
+        @api_auth = Auth.new(id: 'Cluster Auth', manager: self, secret: TunMesh::CONFIG.control_auth_secret)
         @registrations = Registrations.new(manager: self)
         @self_node_info = Structs::NodeInfo.new(
           id: @id,
@@ -26,13 +26,16 @@ module TunMesh
           private_address: Structs::NetAddress.parse_cidr(TunMesh::CONFIG.private_address_cidr)
         )
 
-        TunMesh::CONFIG.bootstrap_node_urls.each do |node_url|
-          @registrations.bootstrap_node(remote_url: node_url)
-        end
-
         @router = TunMesh::VPN::Router.new(manager: self, queue_key: queue_key)
       end
 
+      def bootstrap!
+        @logger.info("Bootstrapping into cluster")
+        TunMesh::CONFIG.bootstrap_node_urls.each do |node_url|
+          @registrations.bootstrap_node(remote_url: node_url)
+        end
+      end
+      
       def health
         _health_sub_targets.transform_values(&:health)
       end
@@ -48,11 +51,15 @@ module TunMesh
       def run_api!
         API::Server.run!(
           manager: self
-        )
+        ) do
+          # Only bootstrap once the API is up.
+          # Otherwise it will fail as the other node calls back to us the check our ID
+          bootstrap!
+        end
       end
       
       def transmit_packet(dest_addr:, packet:)
-        remote_node = @registrations.nodes_by_address[dest_addr]
+        remote_node = @registrations.node_by_address(dest_addr)
         
         if remote_node.nil?
           @logger.warn { "TX: Dropping packet #{packet.id}: Destination #{dest_addr} unknown" }

@@ -1,5 +1,7 @@
+require 'digest'
 require 'jwt'
 require 'logger'
+require 'securerandom'
 
 module TunMesh
   module ControlPlane
@@ -7,47 +9,76 @@ module TunMesh
       class AuthError < StandardError
       end
 
-      JWT_ALGORITHM = 'HS256'.freeze
+      def self.random_secret
+        return SecureRandom.random_bytes(64)
+      end
       
-      def initialize(manager:, secret:)
-        @logger = Logger.new(STDERR, progname: self.class.to_s)
+      # Using a basic symmetric algorithm as it's the easiest/fastest
+      # Asymmetric keys aren't strictly needed, so favoring the simplicity of symmetric keys
+      JWT_ALGORITHM = 'HS256'.freeze
+
+      attr_reader :id
+      # Expose secret for synchronizing session secrets
+      attr_accessor :secret
+
+      def initialize(id:, manager:, secret:)
+        @id = id
+        @logger = Logger.new(STDERR, progname: "#{self.class}(#{id})")
         @manager = manager
         @secret = secret
       end
 
-      def new_http_authorization_header_value
-        "Bearer: #{new_token}"
+      def new_http_authorization_header_value(**kwargs)
+        "Bearer: #{new_token(**kwargs)}"
       end
       
-      def new_token
+      def new_token(payload:, remote_node_id:)
         iat = Time.now.to_i
         return JWT.encode(
                  {
                    iss: @manager.id,
                    iat: iat,
                    nbf: (iat - 5), # TODO: Hardcoded time
-                   exp: (iat + 45) # TODO: Hardcoded time
+                   exp: (iat + 45), # TODO: Hardcoded time
+                   aud: remote_node_id,
+                   sig: _payload_sig(payload: payload),
+                   sub: @id,
                  },
                  @secret,
                  JWT_ALGORITHM
                )
       end
 
-      def verify(token:)
+      def verify(payload:, token:)
         decoded_token = JWT.decode(token, @secret, true, { algorithm: JWT_ALGORITHM })
-        @logger.debug("Validated token issued by #{decoded_token[0]['iss']}")
-        return decoded_token[0]
+        claims = decoded_token[0].transform_keys(&:to_sym)
+        @logger.debug("Decoded token issued by #{claims[:iss]}: Claims: #{claims}")
+        
+        raise(AuthError, "Audience Mismatch.  Expected #{@manager.id}, got #{claims.fetch(:aud)}") if claims.fetch(:aud) != @manager.id
+        raise(AuthError, "Subject Mismatch.  Expected #{@id}, got #{claims.fetch(:sub)}") if claims.fetch(:sub) != @id
+        sig = _payload_sig(payload: payload)
+        raise(AuthError, "Signature Mismatch.  Expected #{sig}, got #{claims.fetch(:sig)}") if claims.fetch(:sig) != sig
+
+        @logger.debug("Validated token issued by #{claims[:iss]} for payload #{sig}")
+
+        return claims[:iss]
       rescue StandardError => exc
         @logger.warn("Authentication failed: #{exc.class}: #{exc}")
         raise(AuthError, 'Failed.')
       end
 
-      def verify_http_authorization_header_value(value)
-        raise(AuthError, 'No header contents') unless value
+      def verify_http_authorization_header_value(header_value:, payload:)
+        raise(AuthError, 'No header contents') unless header_value
 
-        split_auth_header = value.split
+        split_auth_header = header_value.split
         raise(AuthError, 'Invalid authorization header') if split_auth_header.length != 2 || split_auth_header[0].downcase != 'bearer:'
-        verify(token: split_auth_header[1])
+        verify(payload: payload, token: split_auth_header[1])
+      end
+
+      private
+
+      def _payload_sig(payload:)
+        Digest::SHA256.hexdigest(payload)
       end
     end
   end

@@ -1,4 +1,6 @@
 require 'logger'
+require 'httparty'
+require 'pathname'
 require 'persistent_http'
 require_relative '../structs/registration'
 require_relative '../../ipc/packet'
@@ -15,13 +17,17 @@ module TunMesh
             super(message)
           end
         end
-      
-        def initialize(manager:, remote_url:)
+
+        attr_reader :remote_url
+        
+        def initialize(manager:, remote_url:, remote_id: nil)
           raise(ArgumentError, "Missing manager") if manager.nil? 
           raise(ArgumentError, "Missing remote_url") if remote_url.nil?
          
           @manager = manager
-          @logger = Logger.new(STDERR, progname: "#{self.class}(#{remote_url})")
+          @remote_id = remote_id
+          @remote_url = remote_url
+          @logger = Logger.new(STDERR, progname: "#{self.class}(#{remote_id}@#{remote_url})")
 
           @persistent_http = PersistentHTTP.new(
             :name         => "#{self.class}(#{remote_url})",
@@ -32,6 +38,8 @@ module TunMesh
             :force_retry  => true,
             :url          => remote_url
           )
+
+          @logger.debug("Initialized")
         end
 
         def register(payload:)
@@ -40,6 +48,27 @@ module TunMesh
                        payload: payload)
         end
 
+        def remote_id
+          return @remote_id if @remote_id
+
+          url = Pathname.new(@remote_url).join('tunmesh/control/v0/node_info/id')
+
+          begin
+          
+            # Don't use @persistent_http or @logger as they're not initialized yet
+            # We need the ID to init the logger to init persistent_http
+            resp = HTTParty.get(url.to_s, verify: false)
+
+            raise(RequestException.new("HTTP #{resp.code}", resp.code)) if resp.code != 200
+            raise(RequestException.new("Invalid response", resp.code)) unless resp['id']
+            @remote_id = resp['id']
+
+            return @remote_id
+          rescue StandardError => exc
+            raise(exc, "Failed to perform ID GET to #{url}: #{exc}")
+          end
+        end
+        
         def transmit_packet(packet:)
           raise(ArgumentError, "Packet must be a TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
           return _post(path: '/tunmesh/control/v0/packet/rx',
@@ -54,9 +83,10 @@ module TunMesh
           # NOTE: No SSL Verification
           # As this is expected to be using using advertised, dynamic URLs based on IP:Port combos the CN won't match.
           # Impersonation attacks are intended to be caught by the request JWT auth
-          request.body = payload.to_json
+          raw_payload = payload.to_json
+          request.body = raw_payload
           request.content_type = 'application/json'
-          request['Authorization'] = @manager.api_auth.new_http_authorization_header_value
+          request['Authorization'] = @manager.api_auth.new_http_authorization_header_value(payload: raw_payload, remote_node_id: remote_id)
 
           resp = @persistent_http.request(request)
           return nil if resp.code == '204'
@@ -65,16 +95,31 @@ module TunMesh
           raise(RequestException.new("HTTP POST to #{path} returned unexpected content/code #{resp.content_type} / #{resp.code}", resp.code)) unless resp.code == '200'
           raise(RequestException.new("HTTP POST to #{path} returned content type #{resp.content_type}", resp.code)) if resp.content_type != 'application/json'
 
+          body = resp.body
+          
           begin
-            token_claims = @manager.api_auth.verify_http_authorization_header_value(resp['authorization'])
-            # TODO: Improve this
-            raise("Response authentication issuer mismatch.") if token_claims['iss'] == @manager.id
+            @manager.api_auth.verify_http_authorization_header_value(header_value: resp['authorization'], payload: body)
           rescue StandardError => exc
             raise(RequestException.new("HTTP POST to #{path} failed response authorization verification: #{exc.class}: #{exc}", resp.code))
           end
 
-          return resp.body
+          return body
         end
+
+        # TODO: Use or delete
+        #def _get(path:)
+        #  @logger.debug { "Performing HTTP GET to #{path}" }
+        #  request = Net::HTTP::GET.new(path)
+        #  # NOTE: No SSL Verification
+        #  # As this is expected to be using using advertised, dynamic URLs based on IP:Port combos the CN won't match.
+        #  # Impersonation attacks are intended to be caught by the request JWT auth
+        #  resp = @persistent_http.request(request)
+        #
+        #  raise(RequestException.new("HTTP POST to #{path} returned unexpected content/code #{resp.content_type} / #{resp.code}", resp.code)) unless resp.code == '200'
+        #  raise(RequestException.new("HTTP POST to #{path} returned content type #{resp.content_type}", resp.code)) if resp.content_type != 'application/json'
+        #
+        #         return resp.body
+        #      end
       end
     end
   end
