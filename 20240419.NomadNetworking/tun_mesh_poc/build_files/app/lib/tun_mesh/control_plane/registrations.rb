@@ -33,7 +33,7 @@ module TunMesh
       end
 
       def healthy?
-        return false unless health.values.all?
+        health.values.all?
       end
       
       def outbound_registration_payload
