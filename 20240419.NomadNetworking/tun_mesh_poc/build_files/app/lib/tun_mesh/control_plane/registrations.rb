@@ -33,7 +33,7 @@ module TunMesh
       end
 
       def healthy?
-        health.values.all?
+        return false unless health.values.all?
       end
       
       def outbound_registration_payload
@@ -94,12 +94,18 @@ module TunMesh
 
         # NOTE: each_key *NOT* safe here
         @remote_nodes.keys.each { |id| _update_registration(id: id) }
+
         @remote_nodes.delete_if do |node_id, node|
           if node.stale?
             @logger.warn("Removed stale node #{node_id}")
+            node.close
             true
-          else
+          elsif node.healthy?
             false
+          else
+            @logger.warn("Removed unhealthy node #{node_id}: #{node.health}")
+            node.close
+            true
           end
         end
       end
@@ -118,11 +124,17 @@ module TunMesh
 
         private_address = @remote_nodes[registration.local.id].node_info.private_address.address
         @node_ids_by_address_lock.synchronize do
-          unless @node_ids_by_address.key?(private_address) && @node_ids_by_address[private_address] == registration.local.id
-            @logger.warn("Replacing node #{@node_ids_by_address[private_address]} with #{registration.local.id} for #{private_address}") 
-            @node_ids_by_address[private_address] = registration.local.id
-            @nodes_by_address = nil
+          if @node_ids_by_address.key?(private_address)
+            return if @node_ids_by_address[private_address] == registration.local.id
+
+            @logger.warn("Replacing node #{@node_ids_by_address[private_address]} with #{registration.local.id} for #{private_address}")
+            @remote_nodes[@node_ids_by_address[private_address]]&.close
+          else
+            @logger.info("Storing node #{registration.local.id} for #{private_address}")
           end
+
+          @node_ids_by_address[private_address] = registration.local.id
+          @nodes_by_address = nil
         end
       end
 

@@ -114,7 +114,7 @@ module TunMesh
       def _rx_packet(packet:, source:)
         raise(ArgumentError, "Expected TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
 
-        @logger.debug { "#{packet.id}: Recieved a #{packet.data_length} byte packet with signature #{packet.md5}" }
+        @logger.debug { "#{packet.id}: Recieved a #{packet.data_length} byte packet with signature #{packet.md5} from #{source}" }
         if (packet.data[0].ord & 0xf0) != 0x40
           @logger.debug { "#{packet.id}: Dropping: Not a IPv4 packet (0x#{packet.data[0].ord.to_s(16)})" }
           return
