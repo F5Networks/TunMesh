@@ -11,6 +11,9 @@ module TunMesh
         @manager = manager
         
         @remote_nodes = {}
+        @node_ids_by_address = {}
+        @node_ids_by_address_lock = Mutex.new
+
         worker
       end
 
@@ -50,14 +53,20 @@ module TunMesh
 
         age = Time.now.to_i - registration.stamp
         @logger.info("Received registration from #{registration.local.id} (#{age}s old)")
-        _store_registration(id: registration.local.id, registration: registration)
-        
+        _store_registration(registration: registration)
+
         return registration
       end
 
       def nodes_by_address
-        # TODO: Caching
-        @remote_nodes.values.map { |rn| [rn.node_info.private_address.address, rn] }.to_h
+        return @nodes_by_address if @nodes_by_address
+
+        @node_ids_by_address_lock.synchronize do
+          @logger.debug("Regenerating nodes_by_address map")
+          @nodes_by_address = @node_ids_by_address.transform_values { |node_id| @remote_nodes[node_id] }.reject { |_, v| v.nil? }
+        end
+
+        return @nodes_by_address
       end
 
       def to_json(*args, **kwargs)
@@ -100,11 +109,20 @@ module TunMesh
         return process_registration(resp)
       end
 
-      def _store_registration(id:, registration:)
-        if @remote_nodes.key?(id)
-          @remote_nodes[id].update_registration(registration)
+      def _store_registration(registration:)
+        if @remote_nodes.key?(registration.local.id)
+          @remote_nodes[registration.local.id].update_registration(registration)
         else
           @remote_nodes[registration.local.id] = RemoteNode.new(manager: @manager, registration: registration)
+        end
+
+        private_address = @remote_nodes[registration.local.id].node_info.private_address.address
+        @node_ids_by_address_lock.synchronize do
+          unless @node_ids_by_address.key?(private_address) && @node_ids_by_address[private_address] == registration.local.id
+            @logger.warn("Replacing node #{@node_ids_by_address[private_address]} with #{registration.local.id} for #{private_address}") 
+            @node_ids_by_address[private_address] = registration.local.id
+            @nodes_by_address = nil
+          end
         end
       end
 
