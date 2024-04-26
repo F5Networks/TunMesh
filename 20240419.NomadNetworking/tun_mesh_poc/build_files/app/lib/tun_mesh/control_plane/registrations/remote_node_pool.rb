@@ -61,13 +61,17 @@ module TunMesh
           @nodes.values
         end
 
-        def register(registration:)
+        def register(registration:, api_client: nil)
           id = registration.local.id
           
           if @nodes.key?(id)
             @nodes[id].update_registration(registration)
           else
-            @nodes[id] = RemoteNode.new(manager: @manager, registration: registration)
+            @nodes[id] = RemoteNode.new(
+              api_client: api_client,
+              manager: @manager,
+              registration: registration
+            )
           end
 
           _sync_node_addresses(updated_node: @nodes[id])

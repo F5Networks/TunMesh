@@ -1,4 +1,4 @@
-require_relative 'api/client'
+require './lib/tun_mesh/config'
 require_relative 'structs/registration'
 require_relative 'registrations/errors'
 require_relative 'registrations/remote_node_pool'
@@ -16,7 +16,7 @@ module TunMesh
       end
 
       def bootstrap_node(remote_url:)
-        _register(api_client: API::Client.new(manager: @manager, remote_url: remote_url))
+        _register(api_client: @manager.api.new_client(remote_url: remote_url))
       rescue StandardError => exc
         @logger.warn("Failed to bootstrap node at #{remote_url}: #{exc.class}: #{exc}")
         @logger.debug { exc.backtrace }
@@ -41,12 +41,12 @@ module TunMesh
         )
       end
       
-      def process_registration(raw_payload:, remote_node_id:)
+      def process_registration(raw_payload:, remote_node_id:, api_client: nil)
         registration = Structs::Registration.from_json(raw_payload)
 
         # Protection against misrouted discovery registrations
         # Could be due to a badly templated config block, or using a load balancer for discovery
-        if registration.local.id == @manager.id
+        if registration.local.id == TunMesh::CONFIG.node_id
           @logger.warn("Rejecting registration from self")
           raise RegistrationFromSelf
         end
@@ -58,7 +58,7 @@ module TunMesh
 
         age = Time.now.to_i - registration.stamp
         @logger.info("Received registration from #{registration.local.id} (#{age}s old)")
-        @remote_nodes.register(registration: registration)
+        @remote_nodes.register(api_client: api_client, registration: registration)
 
         return registration
       end
@@ -69,9 +69,13 @@ module TunMesh
 
       def nodes_by_address
         # NOTE: Not locked in @remote_nodes.  Intended for debugging
-        return @remote_nodes.node_ids_by_address.transform_values { |id| @remote_nodes.node_by_id(id) }
+        return @remote_nodes.node_ids_by_address.transform_values { |id| node_by_id(id) }
       end
 
+      def node_by_id(id)
+        @remote_nodes.node_by_id(id)
+      end
+      
       def to_json(*args, **kwargs)
         @remote_nodes.to_json(*args, **kwargs)
       end
@@ -101,13 +105,14 @@ module TunMesh
 
       def _register(api_client:)
         return process_registration(
+                 api_client: api_client,
                  raw_payload: api_client.register(payload: outbound_registration_payload),
                  remote_node_id: api_client.remote_id
                )
       end
 
       def _update_registration(id:)
-        remote_node = @remote_nodes.node_by_id(id)
+        remote_node = node_by_id(id)
         raise(ArgumentError, "Unknown remote node #{id}") unless remote_node
 
         if remote_node.registration_required?
@@ -121,9 +126,9 @@ module TunMesh
         end
 
         remote_node.remotes.each do |remote_node_info|
-          next if remote_node_info.id == @manager.id
+          next if remote_node_info.id == TunMesh::CONFIG.node_id
           # If the node is in the @remote_nodes list it will be handled by the outer loop
-          next @remote_nodes.key?(remote_node_info.id)
+          next if @remote_nodes.node_by_id(remote_node_info.id)
 
           @logger.info("Bootstrapping remote node #{remote_node_info.id} at #{remote_node_info.listen_url}, via #{id}")
           bootstrap_node(remote_url: remote_node_info.listen_url)

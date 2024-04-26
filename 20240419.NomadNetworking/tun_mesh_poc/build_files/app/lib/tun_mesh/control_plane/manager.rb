@@ -3,8 +3,7 @@ require 'securerandom'
 
 require './lib/tun_mesh/config'
 require './lib/tun_mesh/vpn/router'
-require_relative 'api/server'
-require_relative 'auth'
+require_relative 'api'
 require_relative 'registrations'
 require_relative 'structs/net_address'
 require_relative 'structs/node_info'
@@ -12,16 +11,14 @@ require_relative 'structs/node_info'
 module TunMesh
   module ControlPlane
     class Manager
-      attr_reader :api_auth, :id, :registrations, :router, :self_node_info
+      attr_reader :api_auth, :registrations, :router, :self_node_info
       
       def initialize(queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
-        @id = SecureRandom.uuid
 
-        @api_auth = Auth.new(id: 'Cluster Auth', manager: self, secret: TunMesh::CONFIG.control_auth_secret)
         @registrations = Registrations.new(manager: self)
         @self_node_info = Structs::NodeInfo.new(
-          id: @id,
+          id: TunMesh::CONFIG.node_id,
           listen_url: TunMesh::CONFIG.advertise_url,
           private_address: Structs::NetAddress.parse_cidr(TunMesh::CONFIG.private_address_cidr)
         )
@@ -29,6 +26,10 @@ module TunMesh
         @router = TunMesh::VPN::Router.new(manager: self, queue_key: queue_key)
       end
 
+      def api
+        @api ||= API.new(manager: self)
+      end
+      
       def bootstrap!
         @logger.info("Bootstrapping into cluster")
         TunMesh::CONFIG.bootstrap_node_urls.each do |node_url|
@@ -49,9 +50,7 @@ module TunMesh
       end
 
       def run_api!
-        API::Server.run!(
-          manager: self
-        ) do
+        api.run! do
           # Only bootstrap once the API is up.
           # Otherwise it will fail as the other node calls back to us the check our ID
           bootstrap!

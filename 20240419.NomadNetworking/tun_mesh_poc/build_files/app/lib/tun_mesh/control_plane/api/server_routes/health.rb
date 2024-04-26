@@ -3,8 +3,8 @@ require 'sinatra/json'
 
 module TunMesh
   module ControlPlane
-    module API
-      module Routes
+    class API
+      module ServerRoutes
         module Health
           extend Sinatra::Extension
           
@@ -14,7 +14,7 @@ module TunMesh
 
           get '/health' do
             if settings.manager.healthy?
-              status 200
+                status 200
             else
               status 503
             end

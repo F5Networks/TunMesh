@@ -1,11 +1,15 @@
+require 'securerandom'
 require 'yaml'
 
 module TunMesh
   # App config
   # TODO: MVP, over simple
   class Config
+    attr_reader :node_id
+    
     def initialize(path: ENV.fetch('TUNMESH_CONFIG_PATH', '/etc/tunmesh/config.yaml'))
       @config = YAML.safe_load(File.read(path))
+      @node_id = SecureRandom.uuid
     end
 
     def advertise_url
@@ -32,7 +36,7 @@ module TunMesh
     def control_ssl_key_file_path
       @config.fetch('control').fetch('ssl').fetch('key_file_path')
     end
-
+    
     # TODO: internal: bad namespace
     def private_address_cidr
       @config.fetch('internal').fetch('private_address_cidr')

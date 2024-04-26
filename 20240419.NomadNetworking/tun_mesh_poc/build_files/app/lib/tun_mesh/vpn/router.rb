@@ -17,9 +17,9 @@ module TunMesh
         _heartbeat_thread
       end
 
-      def rx_remote_packet(packet_json:)
+      def rx_remote_packet(packet_json:, source:)
         packet = TunMesh::IPC::Packet.from_json(packet_json)
-        _rx_packet(packet: packet, source: :remote)
+        _rx_packet(packet: packet, source: source)
       end
 
       def health
@@ -123,13 +123,16 @@ module TunMesh
         ipv4_obj = Packets::IPv4::Packet.decode(packet.data)
         @logger.debug { "#{packet.id}: IPv4: #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str}" }
 
-        case source
-        when :local
+        if source == :local
           _route_local_packet(ipv4_obj: ipv4_obj, packet: packet)
-        when :remote
-          _route_remote_packet(ipv4_obj: ipv4_obj, packet: packet)
         else
-          raise("INTERNAL ERROR: unknown source #{source}")
+          source_id_by_dest_ip = @manager.registrations.node_by_address(ipv4_obj.source_str).id
+          if source_id_by_dest_ip != source
+            @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Recieved from #{source} but route to dest is to #{source_id_by_dest_ip}")
+            return
+          end
+
+          _route_remote_packet(ipv4_obj: ipv4_obj, packet: packet)
         end
       end
     end

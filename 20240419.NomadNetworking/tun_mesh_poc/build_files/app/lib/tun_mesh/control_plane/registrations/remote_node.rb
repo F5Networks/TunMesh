@@ -9,17 +9,22 @@ module TunMesh
       class RemoteNode
         attr_reader :api_client, :id, :registration
         
-        def initialize(manager:, registration:)
+        def initialize(manager:, registration:, api_client: nil)
           @manager = manager
-          @transmit_queue = Queue.new
-          @api_client = API::Client.new(manager: @manager, remote_id: registration.local.id, remote_url: registration.local.listen_url)
+          @api_client = api_client
           @registration = registration
 
           @logger = Logger.new(STDERR, progname: "#{self.class}(#{id})")
+
+          @transmit_queue = Queue.new
         end
 
-        def api_session_auth
-          return @api_session_auth if @api_session_auth
+        def api_client
+          @api_client ||= @manager.api.new_client(remote_id: registration.local.id, remote_url: registration.local.listen_url)
+        end
+        
+        def api_session_auth(rotate: false)
+          return @api_session_auth if @api_session_auth && !rotate
           raise("Remote ID unknown, cannot instantiate auth") unless id
 
           @api_session_auth = Auth.new(

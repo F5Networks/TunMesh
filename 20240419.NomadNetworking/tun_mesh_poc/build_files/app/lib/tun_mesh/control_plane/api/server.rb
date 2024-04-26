@@ -1,14 +1,20 @@
 require 'sinatra/base'
 require './lib/tun_mesh/config'
-require_relative 'routes/control'
-require_relative 'routes/health'
+require_relative 'server_routes/auth'
+require_relative 'server_routes/control'
+require_relative 'server_routes/health'
 
 module TunMesh
   module ControlPlane
-    module API
+    class API
       class Server < Sinatra::Base
-        register Routes::Control
-        register Routes::Health
+        ROUTES = [
+          ServerRoutes::Auth,
+          ServerRoutes::Control,
+          ServerRoutes::Health
+        ]
+
+        ROUTES.each { |route| register route }
 
         not_found do
           status 404
@@ -16,7 +22,7 @@ module TunMesh
         end
         
         def self.run!(**args)
-          _set_route_args(args: args, route: Routes::Control)
+          ROUTES.each { |route| _set_route_args(args: args, route: route) }
 
           # https://puma.io/puma/
           puma_bind = [
