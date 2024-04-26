@@ -94,7 +94,7 @@ module TunMesh
         @manager.transmit_packet(dest_addr: ipv4_obj.dest_str, packet: packet)
       end
 
-      def _route_remote_packet(ipv4_obj:, packet:)
+      def _route_remote_packet(ipv4_obj:, packet:, source:)
         if ipv4_obj.dest_address == 0xffffffff
           @manager.receive_packet(packet: packet)
           return
@@ -103,6 +103,20 @@ module TunMesh
         if ipv4_obj.dest_str != @manager.self_node_info.private_address.address
           @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Misrouted")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :misrouted})
+          return
+        end
+
+        source_node_obj = @manager.registrations.node_by_address(ipv4_obj.source_str)
+        unless source_node_obj
+          @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Unknown source node")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :no_return_route})
+          return
+        end
+          
+        source_id_by_dest_ip = source_node_obj.id
+        if source_id_by_dest_ip != source
+          @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Recieved from #{source} but route to dest is to #{source_id_by_dest_ip}")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :route_conflict})
           return
         end
 
@@ -133,14 +147,7 @@ module TunMesh
         if source == :local
           _route_local_packet(ipv4_obj: ipv4_obj, packet: packet)
         else
-          source_id_by_dest_ip = @manager.registrations.node_by_address(ipv4_obj.source_str).id
-          if source_id_by_dest_ip != source
-            @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Recieved from #{source} but route to dest is to #{source_id_by_dest_ip}")
-            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :route_conflict})
-            return
-          end
-
-          _route_remote_packet(ipv4_obj: ipv4_obj, packet: packet)
+          _route_remote_packet(ipv4_obj: ipv4_obj, packet: packet, source: source)
         end
       end
     end
