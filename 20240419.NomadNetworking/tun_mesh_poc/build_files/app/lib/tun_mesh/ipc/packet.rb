@@ -6,9 +6,6 @@ require 'securerandom'
 
 module TunMesh
   class IPC
-    # TODO: This doesn't need to be a bindata, as it's not being sent raw.
-    # IPC is via JSON
-    # TODO: If IPC over queues is kept that should use bindata for speed
     class Packet < BinData::Record
       class PayloadError < StandardError
       end

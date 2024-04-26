@@ -37,15 +37,23 @@ module TunMesh
         end
         
         def close
-          @logger.warn("Closing: Dropping #{@transmit_queue.length} messages") unless @transmit_queue.empty?
-          @transmit_queue.close
+          unless @transmit_queue.closed?
+            @transmit_queue.close
+
+            unless @transmit_queue.empty?
+              pending_packets = @transmit_queue.length
+              @logger.warn("Closing: Dropping #{@transmit_queue.length} messages")
+              @manager.monitors.increment_gauge(id: :dropped_packets, by: pending_packets, labels: {reason: :node_close})
+            end
+          end
+
           _transmit_worker.terminate
         end
 
         def health
           rv = {
             registration: !stale?,
-            transmit_queue: !@transmit_queue.closed?,
+            transmit_queue: !@transmit_queue.closed?
           }
 
           # Only include transmit_worker stats if the worker is initialized
@@ -131,6 +139,7 @@ module TunMesh
                 packet_age = Time.now.to_f - packet.stamp
                 if packet_age > 10
                   @logger.warn("Dropping packet #{packet.id}: Expired: #{packet_age}s old")
+                  @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :expired})
                   next
                 end
                 
@@ -139,6 +148,7 @@ module TunMesh
               rescue StandardError => exc
                 @logger.warn("transmit_worker: Iteration caught exception: #{exc.class}: #{exc}")
                 @logger.warn("Dropping packet #{packet.id}: Exception") if packet&.id
+                @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :exception})
               end
             end
           ensure

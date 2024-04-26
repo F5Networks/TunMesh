@@ -19,6 +19,7 @@ module TunMesh
 
       def rx_remote_packet(packet_json:, source:)
         packet = TunMesh::IPC::Packet.from_json(packet_json)
+        @manager.monitors.increment_gauge(id: :tun_rx_packets)
         _rx_packet(packet: packet, source: source)
       end
 
@@ -80,11 +81,13 @@ module TunMesh
         if ipv4_obj.dest_address == 0xffffffff
           # TODO: Dropping because ... not ready to code the subnet check
           @logger.warn { "Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} (Broadcast)" }
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :broadcast})
           return
         end
         
         if ipv4_obj.dest_str == @manager.self_node_info.private_address.address
           @logger.warn("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} (Self) received local")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :loopback})
           return
         end
 
@@ -99,16 +102,19 @@ module TunMesh
         
         if ipv4_obj.dest_str != @manager.self_node_info.private_address.address
           @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Misrouted")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :misrouted})
           return
         end
 
         unless tun_healthy?
           # This is a protection against filling up the queue if the other end is down.
           @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Tun unhealthy")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :tun_issue})
           return
         end
 
         @queue_manager.tun_write.push(packet.encode)
+        @manager.monitors.increment_gauge(id: :tun_tx_packets)
       end
 
       def _rx_packet(packet:, source:)
@@ -117,6 +123,7 @@ module TunMesh
         @logger.debug { "#{packet.id}: Recieved a #{packet.data_length} byte packet with signature #{packet.md5} from #{source}" }
         if (packet.data[0].ord & 0xf0) != 0x40
           @logger.debug { "#{packet.id}: Dropping: Not a IPv4 packet (0x#{packet.data[0].ord.to_s(16)})" }
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :non_ipv4})
           return
         end
 
@@ -129,6 +136,7 @@ module TunMesh
           source_id_by_dest_ip = @manager.registrations.node_by_address(ipv4_obj.source_str).id
           if source_id_by_dest_ip != source
             @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Recieved from #{source} but route to dest is to #{source_id_by_dest_ip}")
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :route_conflict})
             return
           end
 

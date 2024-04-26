@@ -4,6 +4,7 @@ require 'securerandom'
 require './lib/tun_mesh/config'
 require './lib/tun_mesh/vpn/router'
 require_relative 'api'
+require_relative 'monitoring'
 require_relative 'registrations'
 require_relative 'structs/net_address'
 require_relative 'structs/node_info'
@@ -11,7 +12,7 @@ require_relative 'structs/node_info'
 module TunMesh
   module ControlPlane
     class Manager
-      attr_reader :api_auth, :registrations, :router, :self_node_info
+      attr_reader :api_auth, :monitors, :registrations, :router, :self_node_info
       
       def initialize(queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
@@ -24,6 +25,7 @@ module TunMesh
         )
 
         @router = TunMesh::VPN::Router.new(manager: self, queue_key: queue_key)
+        @monitors = Monitoring.new
       end
 
       def api
@@ -46,6 +48,7 @@ module TunMesh
       end
       
       def receive_packet(**kwargs)
+        monitors.increment_gauge(id: :remote_rx_packets)
         @router.rx_remote_packet(**kwargs)
       end
 
@@ -62,11 +65,13 @@ module TunMesh
         
         if remote_node.nil?
           @logger.warn { "TX: Dropping packet #{packet.id}: Destination #{dest_addr} unknown" }
+          monitors.increment_gauge(id: :dropped_packets, labels: {reason: :no_route})
           return
         end
 
         @logger.debug { "TX: Transmitting packet #{packet.id} to #{remote_node.node_info.id} / #{dest_addr}" }
         remote_node.transmit_packet(packet: packet)
+        monitors.increment_gauge(id: :remote_tx_packets)
       end
 
       private

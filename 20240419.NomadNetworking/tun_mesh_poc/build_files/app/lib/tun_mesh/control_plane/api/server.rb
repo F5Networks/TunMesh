@@ -1,4 +1,5 @@
 require 'sinatra/base'
+require 'prometheus/middleware/exporter'
 require './lib/tun_mesh/config'
 require_relative 'server_routes/auth'
 require_relative 'server_routes/control'
@@ -16,6 +17,9 @@ module TunMesh
 
         ROUTES.each { |route| register route }
 
+        # TODO: Toggle
+        use Prometheus::Middleware::Exporter
+        
         not_found do
           status 404
           body "Not Found"
