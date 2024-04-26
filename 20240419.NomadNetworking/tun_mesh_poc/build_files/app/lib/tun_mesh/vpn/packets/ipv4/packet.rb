@@ -1,7 +1,5 @@
 require 'bindata'
 
-require_relative './checksum'
-
 module TunMesh
   module VPN
     module Packets
@@ -19,6 +17,10 @@ module TunMesh
           bit13 :fragment_offset
           uint8 :ttl
           uint8 :protocol
+
+          # NOTE: This implementation is a parser only, and does not have code to
+          #    generate the checksum when building a packet.
+          # Building IPv4 packets from scratch is not currently supported.
           uint16 :header_checksum
           uint32 :source_address
           uint32 :dest_address
@@ -28,9 +30,6 @@ module TunMesh
           virtual :version_test, assert: -> { version == 4 }
           virtual :options_length_test, assert: -> { (options.length % 4) == 0 }
           
-          # TODO: Why fail?
-          #virtual :checksum_test, assert: -> { header_checksum == calculate_header_checksum }
-
           def self.decode(payload)
             self.read(payload)
           end
@@ -41,12 +40,7 @@ module TunMesh
           end
 
           def encode
-            self.header_checksum = calculate_header_checksum
             self.to_binary_s
-          end
-
-          def calculate_header_checksum
-            IPv4::Checksum.generate(self.to_binary_s, 10)
           end
 
           def data_length_in_bytes
