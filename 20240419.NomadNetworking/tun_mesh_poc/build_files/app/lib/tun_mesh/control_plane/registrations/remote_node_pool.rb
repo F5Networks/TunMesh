@@ -42,9 +42,12 @@ module TunMesh
 
         def node_by_address(address)
           node_id = node_id_by_address(address)
-          raise("INTERNAL ERROR: Address lookup for #{address} returned unknown ID #{node_id}") unless node_id
-          
-          node_by_id(node_id_by_address(address))
+          return nil unless node_id
+
+          node = node_by_id(node_id)
+          raise("INTERNAL ERROR: Address lookup for #{address} returned unknown ID #{node_id}") unless node
+
+          return node
         end
 
         def node_by_id(id)
