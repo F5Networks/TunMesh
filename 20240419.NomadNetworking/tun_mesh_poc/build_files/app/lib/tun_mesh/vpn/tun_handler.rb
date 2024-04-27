@@ -16,12 +16,12 @@ module TunMesh
       
       def run!
         _open_tunnel do |tun|
-          Process::UID.change_privilege(100010) # TODO: hardcode
+          Process::UID.change_privilege(TunMesh::CONFIG.values.process.uid)
           loop do
             _process_traffic(tun: tun)
             
             @logger.warn("process_traffic() exited")
-            sleep(1) # TODO: hardcode
+            sleep(TunMesh::CONFIG.values.process.timing.tun_handler.fault_delay)
           end
         end
       end
@@ -30,26 +30,27 @@ module TunMesh
       
       def _open_tunnel
         begin
-          @logger.debug("Opening #{TunMesh::CONFIG.tun_device_name}")
-          tun = RbTunTap::TunDevice.new(TunMesh::CONFIG.tun_device_name)
+          @logger.debug("Opening #{TunMesh::CONFIG.values.networking.tun_device_id}")
+          tun = RbTunTap::TunDevice.new(TunMesh::CONFIG.values.networking.tun_device_id)
           tun.open(false)
 
-          dev_ipaddr_obj = TunMesh::ControlPlane::Structs::NetAddress.parse_cidr(TunMesh::CONFIG.private_address_cidr)
-          @logger.debug("Configuring #{TunMesh::CONFIG.tun_device_name} address #{dev_ipaddr_obj.address}/#{dev_ipaddr_obj.netmask}")
+          # TODO: IPv6 support
+          dev_ipaddr_obj = TunMesh::CONFIG.values.networking[:ipv4].node_address_cidr
+          @logger.debug("Configuring #{TunMesh::CONFIG.values.networking.tun_device_id} address #{dev_ipaddr_obj.address}/#{dev_ipaddr_obj.netmask}")
           tun.addr    = dev_ipaddr_obj.address.to_s
           tun.netmask = dev_ipaddr_obj.netmask.to_s
 
-          @logger.debug("Bringing up #{TunMesh::CONFIG.tun_device_name}")
+          @logger.debug("Bringing up #{TunMesh::CONFIG.values.networking.tun_device_id}")
           tun.up
 
-          @logger.info("#{TunMesh::CONFIG.tun_device_name} open")
+          @logger.info("#{TunMesh::CONFIG.values.networking.tun_device_id} open")
 
           yield tun
         ensure
-          @logger.debug("Closing #{TunMesh::CONFIG.tun_device_name}")
+          @logger.debug("Closing #{TunMesh::CONFIG.values.networking.tun_device_id}")
           tun.down
           tun.close
-          @logger.info("#{TunMesh::CONFIG.tun_device_name} closed")
+          @logger.info("#{TunMesh::CONFIG.values.networking.tun_device_id} closed")
         end
       end
 
@@ -57,16 +58,24 @@ module TunMesh
         @logger.debug("_process_traffic() Entering")
         threads = []
 
-        # TODO: This should be select() or something.
         threads.push(Thread.new do
                        loop do
                          begin
                            packet = TunMesh::IPC::Packet.decode(@queue_manager.tun_write.pop)
+                           break if packet.nil?
+
                            @logger.debug { "Writing #{packet.id}: #{packet.data_length}b, #{Time.now.to_f - packet.stamp}s old" }
                            tun.to_io.write(packet.data)
                            tun.to_io.flush
+                         rescue Errno::EIDRM => exc
+                           @logger.warn { "Queue shut down: #{exc.class}: #{exc}" }
+                           break
                          rescue StandardError => exc
-                           @logger.warn { "Failed to write #{packet.id}: #{exc.class}: #{exc}" }
+                           if packet.nil?
+                             @logger.warn { "Failed to read tun_write packet: #{exc.class}: #{exc}" }
+                           else
+                             @logger.warn { "Failed to write #{packet.id}: #{exc.class}: #{exc}" }
+                           end
                          end
                        end
                      end)
@@ -86,7 +95,7 @@ module TunMesh
         loop do
           break unless threads.map(&:alive?).all?
           @queue_manager.tun_heartbeat.push(Time.now.to_f)
-          sleep(1) # TODO: Hardcode
+          sleep(TunMesh::CONFIG.values.process.timing.tun_handler.heartbeat_interval)
         end
 
         @logger.debug("process_traffic() Exiting")

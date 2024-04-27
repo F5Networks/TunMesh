@@ -14,7 +14,7 @@ module TunMesh
         end
 
         # Child classes are expected to define FIELDS
-        def initialize(**args)
+        def initialize(**kwargs)
           self.class::FIELDS.each_pair do |name, config|
             raise(ArgumentError, "INTERNAL ERROR: Field config for #{name} missing required setting type") unless config[:type]
             raise(ArgumentError, "INTERNAL ERROR: Field config for #{name}: Type #{type}: Not a class") unless config[:type].is_a? Class
@@ -26,8 +26,8 @@ module TunMesh
             define_singleton_method("#{name}=") { |val| _set_attr(name, val) } if config.fetch(:define_setter, self.class::SETTER_DEFAULT)
           end
 
-          # The constructor needs to take all the args, for from_json()
-          args.each_pair do |name, val|
+          # The constructor needs to take all the kwargs, for from_json()
+          kwargs.each_pair do |name, val|
             _set_attr(name, val)
           end
         end
@@ -92,6 +92,7 @@ module TunMesh
           end          
 
           instance_variable_set("@#{name}", value)
+          return value
         end
       end
     end

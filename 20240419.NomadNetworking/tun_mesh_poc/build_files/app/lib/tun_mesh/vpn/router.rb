@@ -1,4 +1,5 @@
 require 'logger'
+require './lib/tun_mesh/config'
 require './lib/tun_mesh/ipc/packet'
 require './lib/tun_mesh/ipc/queue_manager'
 require_relative 'packets/ipv4/packet'
@@ -6,6 +7,8 @@ require_relative 'packets/ipv4/packet'
 module TunMesh
   module VPN
     class Router
+      DECODED_PACKET = Struct.new(:net_packet, :proto)
+      
       def initialize(manager:, queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
         @manager = manager
@@ -54,6 +57,26 @@ module TunMesh
 
       private
 
+      def _decode_packet(packet:, source:)
+        raise(ArgumentError, "Expected TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
+        
+        @logger.debug { "#{packet.id}: Recieved a #{packet.data_length} byte packet with signature #{packet.md5} from #{source}" }
+        if (packet.data[0].ord & 0xf0) == 0x40
+          ipv4_obj = Packets::IPv4::Packet.decode(packet.data)
+          @logger.debug { "#{packet.id}: IPv4: #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str}" }
+
+          return DECODED_PACKET.new(
+                   net_packet: ipv4_obj,
+                   proto: :ipv4
+                 )
+        end
+            
+          
+        @logger.debug { "#{packet.id}: Dropping: Not a known protocol (0x#{packet.data[0].ord.to_s(16)})" }
+        @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unknown_proto})
+        return
+      end
+
       # Separate thread to prevent the heartbeat queue from filling up
       def _heartbeat_thread
         @heartbeat_thread ||= Thread.new do
@@ -77,52 +100,58 @@ module TunMesh
         end
       end
       
-      def _route_local_packet(ipv4_obj:, packet:)
-        if ipv4_obj.dest_address == 0xffffffff
-          # TODO: Dropping because ... not ready to code the subnet check
-          @logger.warn { "Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} (Broadcast)" }
-          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :broadcast})
-          return
-        end
-        
-        if ipv4_obj.dest_str == @manager.self_node_info.private_address.address
-          @logger.warn("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} (Self) received local")
+      def _route_local_packet(decoded_packet:, packet:)
+        if decoded_packet.net_packet.dest_str == TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.address
+          @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} (Self) received local")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :loopback})
           return
         end
 
-        @manager.transmit_packet(dest_addr: ipv4_obj.dest_str, packet: packet)
-      end
+        # TODO: Broadcast address support
+        puts("DEBUG: #{TunMesh::CONFIG.values.networking[decoded_packet.proto].network_cidr} #{decoded_packet.net_packet.dest_str}")
+        unless TunMesh::CONFIG.values.networking[decoded_packet.proto].network_cidr.include?(decoded_packet.net_packet.dest_str)
+          @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} (Self) Outside configured network")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :outside_configured_network})
+          return
+        end
 
-      def _route_remote_packet(ipv4_obj:, packet:, source:)
-        if ipv4_obj.dest_address == 0xffffffff
-          @manager.receive_packet(packet: packet)
+        remote_node = @manager.registrations.node_by_address(proto: decoded_packet.proto, address: decoded_packet.net_packet.dest_str)
+        if remote_node.nil?
+          @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str}: Destination #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str} unknown")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :no_route})
           return
         end
         
-        if ipv4_obj.dest_str != @manager.self_node_info.private_address.address
-          @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Misrouted")
+        @logger.debug { "TX: Transmitting packet #{packet.id} to #{remote_node.node_info.id} / #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str}" }
+        remote_node.transmit_packet(packet: packet)
+        monitors.increment_gauge(id: :remote_tx_packets)
+      end
+
+      def _route_remote_packet(decoded_packet:, packet:, source:)
+        # TODO: Broadcast address support
+        if decoded_packet.net_packet.dest_str != TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.address
+          @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Misrouted")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :misrouted})
           return
         end
 
-        source_node_obj = @manager.registrations.node_by_address(ipv4_obj.source_str)
+        source_node_obj = @manager.registrations.node_by_address(proto: decoded_packet.proto, address: decoded_packet.net_packet.source_str)
         unless source_node_obj
-          @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Unknown source node")
+          @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Unknown source node")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :no_return_route})
           return
         end
           
         source_id_by_dest_ip = source_node_obj.id
         if source_id_by_dest_ip != source
-          @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Recieved from #{source} but route to dest is to #{source_id_by_dest_ip}")
+          @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Recieved from #{source} but route to dest is to #{source_id_by_dest_ip}")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :route_conflict})
           return
         end
 
         unless tun_healthy?
           # This is a protection against filling up the queue if the other end is down.
-          @logger.error("Dropping packet #{packet.id} from #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str} received remote: Tun unhealthy")
+          @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Tun unhealthy")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :tun_issue})
           return
         end
@@ -133,21 +162,13 @@ module TunMesh
 
       def _rx_packet(packet:, source:)
         raise(ArgumentError, "Expected TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
-
-        @logger.debug { "#{packet.id}: Recieved a #{packet.data_length} byte packet with signature #{packet.md5} from #{source}" }
-        if (packet.data[0].ord & 0xf0) != 0x40
-          @logger.debug { "#{packet.id}: Dropping: Not a IPv4 packet (0x#{packet.data[0].ord.to_s(16)})" }
-          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :non_ipv4})
-          return
-        end
-
-        ipv4_obj = Packets::IPv4::Packet.decode(packet.data)
-        @logger.debug { "#{packet.id}: IPv4: #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str}" }
+        decoded_packet = _decode_packet(packet: packet, source: source)
+        return unless decoded_packet
 
         if source == :local
-          _route_local_packet(ipv4_obj: ipv4_obj, packet: packet)
+          _route_local_packet(decoded_packet: decoded_packet, packet: packet)
         else
-          _route_remote_packet(ipv4_obj: ipv4_obj, packet: packet, source: source)
+          _route_remote_packet(decoded_packet: decoded_packet, packet: packet, source: source)
         end
       end
     end

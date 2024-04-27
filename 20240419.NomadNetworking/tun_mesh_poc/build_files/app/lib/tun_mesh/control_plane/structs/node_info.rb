@@ -1,5 +1,6 @@
+require './lib/tun_mesh/config'
 require_relative 'base'
-require_relative 'net_address'
+require_relative 'node_addresses'
 
 module TunMesh
   module ControlPlane
@@ -15,10 +16,30 @@ module TunMesh
             type: String
           },
           
-          private_address: {
-            type: NetAddress
+          network_addresses: {
+            type: NodeAddresses
+          },
+
+          node_addresses: {
+            type: NodeAddresses
           }
         }
+        
+        def self.local
+          return @local ||= new(
+            id: TunMesh::CONFIG.node_id,
+            listen_url: TunMesh::CONFIG.values.clustering.control_api_advertise_url.to_s,
+            network_addresses: NodeAddresses.new(
+              **NodeAddresses::FIELDS.keys.to_h do |proto|
+                [proto, TunMesh::CONFIG.values.networking[proto].network_cidr]
+              end),
+            
+            node_addresses: NodeAddresses.new(
+              **NodeAddresses::FIELDS.keys.to_h do |proto|
+                [proto, TunMesh::CONFIG.values.networking[proto].node_address_cidr]
+              end)
+          )
+        end
       end
     end
   end

@@ -37,13 +37,13 @@ module TunMesh
 
         retries = 0
         begin
-          @queue_key = (rand(0x80000000..0xf0fffff0) & 0xfffffff0) if @control # TODO: Hardcode magic values
+          @queue_key = (rand((TunMesh::CONFIG.values.process.ipc.group.key_range_min)..(TunMesh::CONFIG.values.process.ipc.group.key_range_max)) & 0xfffffff0) if @control
           _init_queues
         rescue StandardError => exc
           logger.info("Failed to init with queue_key #{@queue_key.to_s(16)}: Attempt #{retries}: #{exc.class}: #{exc}") if @control
           
           raise exc unless @control
-          raise exc if retries > 3 # TODO: Hardcoded count
+          raise exc if retries > TunMesh::CONFIG.values.process.ipc.group.max_init_attempts
 
           retries += 1
           retry
@@ -53,7 +53,7 @@ module TunMesh
       end
 
       def close
-        @queues.each(&:close)
+        @queues.values.each(&:close)
       end
 
       private

@@ -12,18 +12,12 @@ require_relative 'structs/node_info'
 module TunMesh
   module ControlPlane
     class Manager
-      attr_reader :api_auth, :monitors, :registrations, :router, :self_node_info
+      attr_reader :api_auth, :monitors, :registrations, :router
       
       def initialize(queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
 
         @registrations = Registrations.new(manager: self)
-        @self_node_info = Structs::NodeInfo.new(
-          id: TunMesh::CONFIG.node_id,
-          listen_url: TunMesh::CONFIG.advertise_url,
-          private_address: Structs::NetAddress.parse_cidr(TunMesh::CONFIG.private_address_cidr)
-        )
-
         @router = TunMesh::VPN::Router.new(manager: self, queue_key: queue_key)
         @monitors = Monitoring.new
       end
@@ -34,7 +28,7 @@ module TunMesh
       
       def bootstrap!
         @logger.info("Bootstrapping into cluster")
-        TunMesh::CONFIG.bootstrap_node_urls.each do |node_url|
+        TunMesh::CONFIG.values.clustering.bootstrap_node_urls.each do |node_url|
           @registrations.bootstrap_node(remote_url: node_url)
         end
       end
@@ -58,20 +52,6 @@ module TunMesh
           # Otherwise it will fail as the other node calls back to us the check our ID
           bootstrap!
         end
-      end
-      
-      def transmit_packet(dest_addr:, packet:)
-        remote_node = @registrations.node_by_address(dest_addr)
-        
-        if remote_node.nil?
-          @logger.warn { "TX: Dropping packet #{packet.id}: Destination #{dest_addr} unknown" }
-          monitors.increment_gauge(id: :dropped_packets, labels: {reason: :no_route})
-          return
-        end
-
-        @logger.debug { "TX: Transmitting packet #{packet.id} to #{remote_node.node_info.id} / #{dest_addr}" }
-        remote_node.transmit_packet(packet: packet)
-        monitors.increment_gauge(id: :remote_tx_packets)
       end
 
       private

@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require './lib/tun_mesh/config'
+
+puts TunMesh::CONFIG.example_config

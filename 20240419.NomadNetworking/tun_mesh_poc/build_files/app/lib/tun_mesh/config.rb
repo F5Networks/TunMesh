@@ -1,56 +1,59 @@
+require 'pathname'
 require 'securerandom'
 require 'yaml'
 
+require_relative './config/top'
+require_relative './config/errors'
+
 module TunMesh
   # App config
-  # TODO: MVP, over simple
   class Config
-    attr_reader :node_id
+    attr_reader :config_path, :node_id
     
-    def initialize(path: ENV.fetch('TUNMESH_CONFIG_PATH', '/etc/tunmesh/config.yaml'))
-      @config = YAML.safe_load(File.read(path))
+    def initialize
+      @top_group = Config::Top.new
       @node_id = SecureRandom.uuid
     end
 
-    def advertise_url
-      @config.fetch('control').fetch('advertise_url')
-    end
-
-    def bootstrap_node_urls
-      @config.fetch('discovery').fetch('bootstrap_node_urls')
-    end
-
-    # TODO: API auth secret
-    def control_auth_secret
-      @config.fetch('control').fetch('auth').fetch('secret')
-    end
-
-    def control_listen_port
-      @config.fetch('control').fetch('listen_port', 4567)
-    end
-
-    def control_ssl_cert_file_path
-      @config.fetch('control').fetch('ssl').fetch('cert_file_path')
-    end
-
-    def control_ssl_key_file_path
-      @config.fetch('control').fetch('ssl').fetch('key_file_path')
+    def example_config
+      lines = [
+        "# Example tun_mesh config, generated #{Time.now}",
+        '---',
+      ]
+      lines += @top_group.example_config_lines
+      return lines.join("\n")
     end
     
-    # TODO: internal: bad namespace
-    def private_address_cidr
-      @config.fetch('internal').fetch('private_address_cidr')
+    def parse_file(path)
+      @config_path = Pathname.new(path) # Used in the file type for relative pathing
+      yaml_parsed_contents = YAML.safe_load(File.read(path))
+      
+      raise(Config::Errors::MissingKeyError.new("Missing top level tun_mesh key", 'tun_mesh')) unless yaml_parsed_contents.key?('tun_mesh')
+
+      # Pass self through at a root of tree so parsers can cross-reference
+      @top_group.load_config_value(value: yaml_parsed_contents['tun_mesh'], config_obj: self)
+      @parsed = true
+    rescue Config::Errors::ParseError => exc
+      faulted_key = exc.key
+      faulted_key ||= '[Unknown]'
+      
+      warn("Failed to parse config file #{path}")
+      warn("#{exc.class} at key #{faulted_key}: #{exc}")
+      warn('')
+      
+      raise exc
+    rescue StandardError => exc
+      warn("Failed to parse config file #{path}")
+      warn("#{exc.class}: #{exc}")
+      warn('')
+      raise exc
     end
 
-    def tun_device_name
-      @config.fetch('internal').fetch('tun_device_name', 'tun1')
-    end
-
-    # TODO: Make automatic
-    def ipc_queue_id
-      @config.fetch('ipc', {}).fetch('queue_id', 0x544e4d00)
+    def values
+      parse_file(ENV.fetch('TUNMESH_CONFIG_PATH', '/etc/tunmesh/config.yaml')) unless @parsed
+      @top_group.value
     end
   end
 
-  CONFIG = Config.new.freeze
+  CONFIG = Config.new
 end

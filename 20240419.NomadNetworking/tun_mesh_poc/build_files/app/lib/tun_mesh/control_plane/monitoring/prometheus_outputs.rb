@@ -12,9 +12,8 @@ module TunMesh
         def initialize(registry: Prometheus::Client.registry)
           @registry = registry
           @base_labels = {
-            # TODO: More config
             node_id: TunMesh::CONFIG.node_id
-          }
+          }.merge(TunMesh::CONFIG.values.monitoring.prometheus.base_labels.transform_keys(&:to_sym))
 
           @outputs = {}
         end

@@ -21,13 +21,24 @@ module TunMesh
         }
 
         def self.parse_cidr(cidr)
-          # TODO: Keep pattern?
           return new(cidr: cidr)
         end
 
         def address
           _parse_cidr unless @address
           return @address
+        end
+
+        def include?(other)
+          _network_address_obj.include?(other)
+        end
+          
+        def ipv4?
+          _network_address_obj.ipv4?
+        end
+
+        def ipv6?
+          _network_address_obj.ipv6?
         end
 
         def netmask
@@ -39,7 +50,22 @@ module TunMesh
           return @prefix
         end
 
+        def validate_proto(proto)
+          case proto.to_sym
+          when :ipv4
+            return true if ipv4?
+          when :ipv6
+            return true if ipv6?
+          end
+
+          raise("Address #{address} did not validate as #{proto}")
+        end
+        
         private
+
+        def _network_address_obj
+          @network_address_obj ||= IPAddr.new(@cidr)
+        end
         
         def _parse_cidr
           split_str = @cidr.split('/')

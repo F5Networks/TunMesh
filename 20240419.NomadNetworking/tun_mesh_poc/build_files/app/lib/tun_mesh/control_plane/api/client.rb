@@ -29,17 +29,17 @@ module TunMesh
          
           @api_auth = api_auth
           @remote_id = remote_id
-          @remote_url = remote_url
-          @logger = Logger.new(STDERR, progname: "#{self.class}(#{self.remote_id}@#{remote_url})")
+          @remote_url = remote_url.to_s
+          @logger = Logger.new(STDERR, progname: "#{self.class}(#{self.remote_id}@#{@remote_url})")
 
           @persistent_http = PersistentHTTP.new(
-            :name         => "#{self.class}(#{remote_url})",
+            :name         => "#{self.class}(#{@remote_url})",
             :logger       => @logger,
             :pool_size    => 3, # Only expected to be accessed by the Registrations::RemoteNode worker and the Registrations worker
             :pool_timeout => 5,
             :warn_timeout => 0.25,
             :force_retry  => true,
-            :url          => remote_url
+            :url          => @remote_url
           )
 
           @session_auth_lock = Mutex.new
@@ -140,7 +140,7 @@ module TunMesh
           body = resp.body
         end
 
-        
+# TODO        
 #        def _get_mutual(auth:, path:, signature_payload:)
 #          request = Net::HTTP::GET.new(path)
 #          return _mutual_common(

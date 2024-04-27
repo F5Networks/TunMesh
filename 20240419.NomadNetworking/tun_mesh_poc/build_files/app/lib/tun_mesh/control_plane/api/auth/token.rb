@@ -2,6 +2,7 @@ require 'digest'
 require 'jwt'
 require 'logger'
 require 'securerandom'
+require './lib/tun_mesh/config'
 
 require_relative 'errors'
 
@@ -36,8 +37,8 @@ module TunMesh
                      {
                        iss: TunMesh::CONFIG.node_id,
                        iat: iat,
-                       nbf: (iat - 5), # TODO: Hardcoded time
-                       exp: (iat + 45), # TODO: Hardcoded time
+                       nbf: (iat - TunMesh::CONFIG.values.process.timing.auth.early_validity_window),
+                       exp: (iat + TunMesh::CONFIG.values.process.timing.auth.validity_window),
                        aud: remote_node_id,
                        sig: _payload_sig(payload: payload),
                        sub: @id,

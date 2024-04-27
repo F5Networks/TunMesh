@@ -8,7 +8,7 @@ queue_manager = TunMesh::IPC::QueueManager.new(control: true)
 
 begin
   fork do
-    Process::UID.change_privilege(100010) # TODO: hardcode
+    Process::UID.change_privilege(TunMesh::CONFIG.values.process.uid)
     manager = TunMesh::ControlPlane::Manager.new(queue_key: queue_manager.queue_key)
     manager.run_api!
   end

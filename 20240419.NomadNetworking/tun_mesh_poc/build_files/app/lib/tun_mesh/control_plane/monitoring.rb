@@ -1,12 +1,20 @@
 require './lib/tun_mesh/config'
+require_relative './monitoring/null_outputs'
 require_relative './monitoring/prometheus_outputs'
 
 module TunMesh
   module ControlPlane
     class Monitoring
       def initialize
-        # TODO: Selector
-        @outputs = PrometheusOutputs.new
+        case TunMesh::CONFIG.values.monitoring.method
+        when 'none'
+          @outputs = NullOutputs.new
+          return
+        when 'prometheus'
+          @outputs = PrometheusOutputs.new
+        else
+          raise("INTERNAL ERROR: Unknown monitoring method #{TunMesh::CONFIG.values.monitoring.method}")
+        end
 
         @outputs.add_gauge(
           id: :start_stamp,

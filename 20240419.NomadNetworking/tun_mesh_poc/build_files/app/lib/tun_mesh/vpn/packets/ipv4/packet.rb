@@ -33,7 +33,7 @@ module TunMesh
           def self.decode(payload)
             self.read(payload)
           end
-    
+
           # No port: Layer 3 only
           def dest_str
             _int_to_ip(dest_address)

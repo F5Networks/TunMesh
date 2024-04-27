@@ -19,7 +19,7 @@ module TunMesh
 
         # TODO: Inconsisten naming 
         def cluster_token
-          @cluster_token ||= Token.new(id: 'Cluster Auth', secret: TunMesh::CONFIG.control_auth_secret).freeze
+          @cluster_token ||= Token.new(id: 'Cluster Auth', secret: TunMesh::CONFIG.values.clustering.auth.secret).freeze
         end
 
         def process_init_session_request(raw_request:, remote_node_id:)

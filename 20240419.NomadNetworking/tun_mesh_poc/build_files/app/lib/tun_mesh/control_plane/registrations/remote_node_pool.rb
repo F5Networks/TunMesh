@@ -12,7 +12,7 @@ module TunMesh
           @manager = manager
           @nodes = {}
 
-          @node_ids_by_address = {}
+          @node_ids_by_address = Hash.new { |h,k| h[k] = {} }
           @node_ids_by_address_lock = Mutex.new
         end
 
@@ -40,8 +40,8 @@ module TunMesh
           @nodes.keys
         end
 
-        def node_by_address(address)
-          node_id = node_id_by_address(address)
+        def node_by_address(**kwargs)
+          node_id = node_id_by_address(**kwargs)
           return nil unless node_id
 
           node = node_by_id(node_id)
@@ -54,9 +54,9 @@ module TunMesh
           @nodes[id]
         end
 
-        def node_id_by_address(address)
+        def node_id_by_address(proto:, address:)
           @node_ids_by_address_lock.synchronize do
-            @node_ids_by_address[address]
+            @node_ids_by_address[proto][address]
           end
         end
 
@@ -97,9 +97,11 @@ module TunMesh
           node.close
 
           @node_ids_by_address_lock.synchronize do
-            if @node_ids_by_address[node.private_address] == node.id
-              @logger.warn("Finalizing #{node.id}: Removing route to #{node.private_address}")
-              @node_ids_by_address.delete(node.private_address)
+            node.node_addresses.to_h.each_pair do |proto, address|
+              if @node_ids_by_address[proto][addresses] == node.id
+                @logger.warn("Finalizing #{node.id}: Removing #{proto} route to #{node.node_addresses}")
+                @node_ids_by_address[proto].delete(node.node_addresses)
+              end
             end
           end
 
@@ -108,16 +110,17 @@ module TunMesh
 
         def _sync_node_addresses(updated_node:)
           @node_ids_by_address_lock.synchronize do
-            if @node_ids_by_address.key?(updated_node.private_address)
-              return if @node_ids_by_address[updated_node.private_address] == updated_node.id
+            updated_node.node_addresses.to_h.each_pair do |proto, address|
+              if @node_ids_by_address[proto].key?(address)
+                next if @node_ids_by_address[proto][address] == updated_node.id
 
-              @logger.warn("Replacing node #{@node_ids_by_address[updated_node.private_address]} with #{updated_node.id} for #{updated_node.private_address}")
-              @nodes[@node_ids_by_address[updated_node.private_address]]&.close
-            else
-              @logger.info("Storing node #{updated_node.id} for #{updated_node.private_address}")
+                @logger.warn("Replacing node #{@node_ids_by_address[proto][address]} with #{updated_node.id} for #{proto} #{address}")
+              else
+                @logger.info("Storing node #{updated_node.id} for #{proto} #{address}")
+              end
+              
+              @node_ids_by_address[proto][address] = updated_node.id
             end
-            
-            @node_ids_by_address[updated_node.private_address] = updated_node.id
           end
         end       
       end

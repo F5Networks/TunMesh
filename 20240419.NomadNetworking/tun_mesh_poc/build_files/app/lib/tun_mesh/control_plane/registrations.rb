@@ -1,4 +1,5 @@
 require './lib/tun_mesh/config'
+require_relative 'structs/node_info'
 require_relative 'structs/registration'
 require_relative 'registrations/errors'
 require_relative 'registrations/remote_node_pool'
@@ -35,7 +36,7 @@ module TunMesh
       
       def outbound_registration_payload
         Structs::Registration.new(
-          local: @manager.self_node_info,
+          local: TunMesh::ControlPlane::Structs::NodeInfo.local,
           remote: @remote_nodes.nodes.map { |rn| rn.node_info },
           stamp: Time.now.to_i
         )
@@ -63,13 +64,8 @@ module TunMesh
         return registration
       end
 
-      def node_by_address(address)
-        @remote_nodes.node_by_address(address)
-      end
-
-      def nodes_by_address
-        # NOTE: Not locked in @remote_nodes.  Intended for debugging
-        return @remote_nodes.node_ids_by_address.transform_values { |id| node_by_id(id) }
+      def node_by_address(**kwargs)
+        @remote_nodes.node_by_address(**kwargs)
       end
 
       def node_by_id(id)
@@ -84,8 +80,7 @@ module TunMesh
         @worker = nil unless @worker&.alive?
         @worker ||= Thread.new do
           loop do
-            # TODO: Hardcode / slow
-            sleep(5)
+            sleep(TunMesh::CONFIG.values.process.timing.registrations.groom_interval)
             _groom
           end
         end
