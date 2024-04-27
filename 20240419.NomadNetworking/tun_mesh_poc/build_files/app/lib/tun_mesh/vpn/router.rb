@@ -108,7 +108,6 @@ module TunMesh
         end
 
         # TODO: Broadcast address support
-        puts("DEBUG: #{TunMesh::CONFIG.values.networking[decoded_packet.proto].network_cidr} #{decoded_packet.net_packet.dest_str}")
         unless TunMesh::CONFIG.values.networking[decoded_packet.proto].network_cidr.include?(decoded_packet.net_packet.dest_str)
           @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} (Self) Outside configured network")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :outside_configured_network})
@@ -124,7 +123,7 @@ module TunMesh
         
         @logger.debug { "TX: Transmitting packet #{packet.id} to #{remote_node.node_info.id} / #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str}" }
         remote_node.transmit_packet(packet: packet)
-        monitors.increment_gauge(id: :remote_tx_packets)
+        @manager.monitors.increment_gauge(id: :remote_tx_packets)
       end
 
       def _route_remote_packet(decoded_packet:, packet:, source:)

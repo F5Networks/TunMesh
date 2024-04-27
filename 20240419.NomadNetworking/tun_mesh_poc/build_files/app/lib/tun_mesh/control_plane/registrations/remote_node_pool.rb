@@ -45,7 +45,7 @@ module TunMesh
           return nil unless node_id
 
           node = node_by_id(node_id)
-          raise("INTERNAL ERROR: Address lookup for #{address} returned unknown ID #{node_id}") unless node
+          raise("INTERNAL ERROR: Address lookup for #{kwargs} returned unknown ID #{node_id}") unless node
 
           return node
         end
@@ -98,7 +98,7 @@ module TunMesh
 
           @node_ids_by_address_lock.synchronize do
             node.node_addresses.to_h.each_pair do |proto, address|
-              if @node_ids_by_address[proto][addresses] == node.id
+              if @node_ids_by_address[proto][address] == node.id
                 @logger.warn("Finalizing #{node.id}: Removing #{proto} route to #{node.node_addresses}")
                 @node_ids_by_address[proto].delete(node.node_addresses)
               end

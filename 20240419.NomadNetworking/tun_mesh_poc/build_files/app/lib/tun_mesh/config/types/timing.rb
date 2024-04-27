@@ -9,7 +9,6 @@ module TunMesh
 
           @min = kwargs.fetch(:min, 0.5)
           @max = kwargs.fetch(:max, 3600)
-          @value = 1.0
         end
 
         def load_config_value(value:, **)
