@@ -14,8 +14,8 @@ module TunMesh
         def load_config_value(value:, **)
           @value = value.to_s
 
-          raise(Errors::TypeError, "Value length #{@value.length} below minimum #{@min_length}") if @min_length && @value.length < @min_length
-          raise(Errors::TypeError, "Value length #{@value.length} below maximum #{@max_length}") if @max_length && @value.length > @max_length
+          raise(Errors::ValueError, "Value length #{@value.length} below minimum #{@min_length}") if @min_length && @value.length < @min_length
+          raise(Errors::ValueError, "Value length #{@value.length} below maximum #{@max_length}") if @max_length && @value.length > @max_length
         end
       end
     end

@@ -23,7 +23,7 @@ module TunMesh
             raise(Errors::TypeError, "Cannot parse type #{value.class} into timing value")
           end
 
-          raise(Errors::TypeError, "Value outside allowed range #{min} .. #{max}") if @value < @min || @value > @max
+          raise(Errors::ValueError, "Value outside allowed range #{min} .. #{max}") if @value < @min || @value > @max
         end
 
         private

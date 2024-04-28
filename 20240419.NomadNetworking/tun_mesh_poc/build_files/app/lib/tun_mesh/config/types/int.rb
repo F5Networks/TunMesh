@@ -14,7 +14,7 @@ module TunMesh
 
         def load_config_value(value:, **)
           @value = Integer(value)
-          raise(Errors::TypeError, "Value outside allowed range #{min} .. #{max}") if @value < @min || @value > @max
+          raise(Errors::ValueError, "Value outside allowed range #{min} .. #{max}") if @value < @min || @value > @max
         end
 
         def to_f

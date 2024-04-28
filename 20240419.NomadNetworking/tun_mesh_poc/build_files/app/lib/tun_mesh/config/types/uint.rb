@@ -24,7 +24,7 @@ module TunMesh
         def load_config_value(value:, **)
           super
 
-          raise(Errors::TypeError, "negative value for unsigned integer type") if @value < 0
+          raise(Errors::ValueError, "negative value for unsigned integer type") if @value < 0
         end
 
         private
