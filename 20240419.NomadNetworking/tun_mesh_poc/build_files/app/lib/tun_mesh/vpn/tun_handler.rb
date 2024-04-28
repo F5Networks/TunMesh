@@ -64,6 +64,8 @@ module TunMesh
                            packet = TunMesh::IPC::Packet.decode(@queue_manager.tun_write.pop)
                            break if packet.nil?
 
+                           # TODO: Monitor the age as a metric, optional by source label
+                           # TODO: Monitor packets sent node -> node and packets recieved node -> node (Optional)
                            @logger.debug { "Writing #{packet.id}: #{packet.data_length}b, #{Time.now.to_f - packet.stamp}s old" }
                            tun.to_io.write(packet.data)
                            tun.to_io.flush
