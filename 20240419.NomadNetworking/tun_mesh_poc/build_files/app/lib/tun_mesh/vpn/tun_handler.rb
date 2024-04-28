@@ -35,7 +35,16 @@ module TunMesh
           tun.open(false)
 
           # TODO: IPv6 support
-          dev_ipaddr_obj = TunMesh::CONFIG.values.networking[:ipv4].node_address_cidr
+          # Open the device with the local address but the mesh subnet.
+          # This will cause all mesh IPs to be sent to this process.
+          # Local/mesh subnetting is done in software here.
+          dev_ipaddr_obj = TunMesh::ControlPlane::Structs::NetAddress.parse_cidr(
+            [
+              TunMesh::CONFIG.values.networking[:ipv4].node_address_cidr.address,
+              TunMesh::CONFIG.values.networking[:ipv4].network_cidr.prefix
+            ].join('/')
+          )
+
           @logger.debug("Configuring #{TunMesh::CONFIG.values.networking.tun_device_id} address #{dev_ipaddr_obj.address}/#{dev_ipaddr_obj.netmask}")
           tun.addr    = dev_ipaddr_obj.address.to_s
           tun.netmask = dev_ipaddr_obj.netmask.to_s
