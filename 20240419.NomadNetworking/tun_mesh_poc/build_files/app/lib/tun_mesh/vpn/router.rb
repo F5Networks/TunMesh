@@ -62,6 +62,7 @@ module TunMesh
         raise(ArgumentError, "Expected TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
         
         @logger.debug { "#{packet.id}: Recieved a #{packet.data_length} byte packet with signature #{packet.md5} from #{source}" }
+        # TODO: There is a flag on the tun device to get the actual 16 bit proto value
         case (packet.data[0].ord & 0xf0)
         when 0x40
           ipv4_obj = Packets::IP::IPv4.decode(packet.data)

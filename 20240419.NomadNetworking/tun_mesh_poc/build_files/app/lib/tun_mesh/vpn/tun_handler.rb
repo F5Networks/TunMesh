@@ -35,6 +35,8 @@ module TunMesh
           tun.open(false)
 
           # TODO: IPv6 support
+          # TODO: IPv6 Not supported upstream: https://github.com/amoghe/rb_tuntap/blob/master/lib/rb_tuntap.rb#L95-L97
+
           # Open the device with the local address but the mesh subnet.
           # This will cause all mesh IPs to be sent to this process.
           # Local/mesh subnetting is done in software here.
