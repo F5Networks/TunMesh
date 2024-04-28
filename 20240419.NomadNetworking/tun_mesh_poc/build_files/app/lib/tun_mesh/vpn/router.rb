@@ -2,13 +2,14 @@ require 'logger'
 require './lib/tun_mesh/config'
 require './lib/tun_mesh/ipc/packet'
 require './lib/tun_mesh/ipc/queue_manager'
-require_relative 'packets/ipv4/packet'
+require_relative 'packets/ip/ipv4'
+require_relative 'packets/ip/ipv6'
 
 module TunMesh
   module VPN
     class Router
       DECODED_PACKET = Struct.new(:net_packet, :proto)
-      
+
       def initialize(manager:, queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
         @manager = manager
@@ -61,17 +62,26 @@ module TunMesh
         raise(ArgumentError, "Expected TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
         
         @logger.debug { "#{packet.id}: Recieved a #{packet.data_length} byte packet with signature #{packet.md5} from #{source}" }
-        if (packet.data[0].ord & 0xf0) == 0x40
-          ipv4_obj = Packets::IPv4::Packet.decode(packet.data)
+        case (packet.data[0].ord & 0xf0)
+        when 0x40
+          ipv4_obj = Packets::IP::IPv4.decode(packet.data)
           @logger.debug { "#{packet.id}: IPv4: #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str}" }
 
           return DECODED_PACKET.new(
                    net_packet: ipv4_obj,
                    proto: :ipv4
                  )
+
+        when 0x60
+          ipv6_obj = Packets::IP::IPv6.decode(packet.data)
+          @logger.debug { "#{packet.id}: IPv6: #{ipv6_obj.source_str} -> #{ipv6_obj.dest_str}" }
+
+          # TODO: Pending tun setup & config default handling
+          @logger.warn("Dropping packet #{packet.id} from #{ipv6_obj.source_str} (Self) -> #{ipv6_obj.dest_str}: IPv6 Not supported")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unsupported})
+          return
         end
-            
-          
+
         @logger.debug { "#{packet.id}: Dropping: Not a known protocol (0x#{packet.data[0].ord.to_s(16)})" }
         @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unknown_proto})
         return

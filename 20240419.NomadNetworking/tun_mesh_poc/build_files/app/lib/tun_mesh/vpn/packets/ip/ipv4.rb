@@ -3,8 +3,8 @@ require 'bindata'
 module TunMesh
   module VPN
     module Packets
-      module IPv4
-        class Packet < BinData::Record
+      module IP
+        class IPv4 < BinData::Record
           endian :big
 
           bit4 :version, value: 4
