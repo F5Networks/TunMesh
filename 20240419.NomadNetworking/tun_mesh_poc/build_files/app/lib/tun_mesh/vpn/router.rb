@@ -77,7 +77,7 @@ module TunMesh
           @logger.debug { "#{packet.id}: IPv6: #{ipv6_obj.source_str} -> #{ipv6_obj.dest_str}" }
 
           # TODO: Pending tun setup & config default handling
-          @logger.warn("Dropping packet #{packet.id} from #{ipv6_obj.source_str} (Self) -> #{ipv6_obj.dest_str}: IPv6 Not supported")
+          @logger.debug("Dropping packet #{packet.id} from #{ipv6_obj.source_str} (Self) -> #{ipv6_obj.dest_str}: IPv6 Not supported")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unsupported})
           return
         end
