@@ -71,7 +71,11 @@ module TunMesh
       def node_by_id(id)
         @remote_nodes.node_by_id(id)
       end
-      
+
+      def nodes_by_proto(**kwargs)
+        @remote_nodes.nodes_by_proto(**kwargs)
+      end
+
       def to_json(*args, **kwargs)
         @remote_nodes.to_json(*args, **kwargs)
       end

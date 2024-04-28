@@ -12,6 +12,7 @@ module TunMesh
           @manager = manager
           @nodes = {}
 
+          @node_lookup_lock = Mutex.new
           @node_ids_by_address = Hash.new { |h,k| h[k] = {} }
           @node_ids_by_address_lock = Mutex.new
         end
@@ -21,17 +22,19 @@ module TunMesh
         end
         
         def groom!
-          @nodes.delete_if do |node_id, node|
-            if node.stale?
-              @logger.warn("Removing stale node #{node_id}")
-              _finalize_node(id: node_id)
-              true
-            elsif node.healthy?
-              false
-            else
-              @logger.warn("Removing unhealthy node #{node_id}: #{node.health}")
-              _finalize_node(id: node_id)
-              true
+          @node_lookup_lock.synchronize do
+            @nodes.delete_if do |node_id, node|
+              if node.stale?
+                @logger.warn("Removing stale node #{node_id}")
+                _finalize_node(id: node_id)
+                true
+              elsif node.healthy?
+                false
+              else
+                @logger.warn("Removing unhealthy node #{node_id}: #{node.health}")
+                _finalize_node(id: node_id)
+                true
+              end
             end
           end
         end
@@ -41,13 +44,7 @@ module TunMesh
         end
 
         def node_by_address(**kwargs)
-          node_id = node_id_by_address(**kwargs)
-          return nil unless node_id
-
-          node = node_by_id(node_id)
-          raise("INTERNAL ERROR: Address lookup for #{kwargs} returned unknown ID #{node_id}") unless node
-
-          return node
+          return _node_by_id_safe(node_id: node_id_by_address(**kwargs))
         end
 
         def node_by_id(id)
@@ -60,8 +57,18 @@ module TunMesh
           end
         end
 
+        def node_ids_by_proto(proto:)
+          @node_ids_by_address_lock.synchronize do
+            @node_ids_by_address[proto].values.uniq
+          end
+        end
+
         def nodes
           @nodes.values
+        end
+
+        def nodes_by_proto(**kwargs)
+          node_ids_by_proto(**kwargs).map { |node_id| _node_by_id_safe(node_id: node_id) }.compact
         end
 
         def register(registration:, api_client: nil)
@@ -108,6 +115,17 @@ module TunMesh
           @logger.debug("#{node.id} finalized")
         end
 
+        # Indended for use in node_ids_by_address lookups
+        def _node_by_id_safe(node_id:)
+          return nil unless node_id
+
+          node = @node_lookup_lock.synchronize { node_by_id(node_id) }
+          raise("INTERNAL ERROR: Address lookup for #{kwargs} returned unknown ID #{node_id}") unless node
+
+          return node
+        end
+
+        
         def _sync_node_addresses(updated_node:)
           @node_ids_by_address_lock.synchronize do
             updated_node.node_addresses.to_h.each_pair do |proto, address|

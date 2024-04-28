@@ -1,4 +1,5 @@
 require_relative '../group'
+require_relative '../types/bool'
 require_relative '../types/net_address'
 
 module TunMesh
@@ -11,6 +12,17 @@ module TunMesh
             description_short: "#{key} Network Settings"
           )
 
+          if key == 'ipv4'
+            add_field(
+              Types::Bool.new(
+                key: 'enable_broadcast',
+                proto: key,
+                default: false,
+                description_short: 'Enable tunneling broadcast traffic over the VPN.',
+              )
+            )
+          end
+          
           add_field(
             Types::NetAddress.new(
               key: 'network_cidr',

@@ -107,7 +107,33 @@ module TunMesh
           return
         end
 
-        # TODO: Broadcast address support
+        # Check local broadcast first because of IPv4 255.255.255.255
+        if TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.broadcast?(decoded_packet.net_packet.dest_str)
+          if TunMesh::CONFIG.values.networking[decoded_packet.proto].enable_broadcast
+            if TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.include?(decoded_packet.net_packet.dest_str)
+              # Broadcast to the local broadcast address is not supported, as the tun device is configured with the mesh netmask to get all the traffic for the mesh
+              # Sending a local network broadcast address packet to the remote node will appear as a regular unicast dest IP to the receiving kernel
+              # This is a implementation limitation.
+              @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} (Self): Local Broadcast to subnet broadcast address not supported")
+              @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unsupported})
+              return
+            end
+
+            @logger.info("Packet #{packet.id}: Broadcast packet to the local subnet")
+            @manager.registrations.nodes_by_proto(proto: decoded_packet.proto).select do |remote_node|
+              TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.include?(remote_node.node_addresses[decoded_packet.proto])
+            end.each do |remote_node|
+              _tx_packet(decoded_packet: decoded_packet, packet: packet, remote_node: remote_node)
+            end
+            
+            return
+          else
+            @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} (Self): Local Broadcast (Disabled)")
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :config_prohibited})
+            return
+          end
+        end
+        
         unless TunMesh::CONFIG.values.networking[decoded_packet.proto].network_cidr.include?(decoded_packet.net_packet.dest_str)
           @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} (Self) Outside configured network")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :outside_configured_network})
@@ -115,32 +141,86 @@ module TunMesh
         end
 
         remote_node = @manager.registrations.node_by_address(proto: decoded_packet.proto, address: decoded_packet.net_packet.dest_str)
-        if remote_node.nil?
-          @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str}: Destination #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str} unknown")
-          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :no_route})
+        if remote_node
+          _tx_packet(decoded_packet: decoded_packet, packet: packet, remote_node: remote_node)
           return
         end
-        
-        @logger.debug { "TX: Transmitting packet #{packet.id} to #{remote_node.node_info.id} / #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str}" }
-        remote_node.transmit_packet(packet: packet)
-        @manager.monitors.increment_gauge(id: :remote_tx_packets)
+
+        if TunMesh::CONFIG.values.networking[decoded_packet.proto].network_cidr.broadcast?(decoded_packet.net_packet.dest_str)
+          if TunMesh::CONFIG.values.networking[decoded_packet.proto].enable_broadcast
+            @logger.info("Packet #{packet.id}: Broadcast packet to the routed subnet")
+            @manager.registrations.nodes_by_proto(proto: decoded_packet.proto).each do |remote_node|
+              _tx_packet(decoded_packet: decoded_packet, packet: packet, remote_node: remote_node)
+            end
+
+            return
+          else
+            @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} (Self): WAN Broadcast (Disabled)")
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :config_prohibited})
+            return
+          end
+        end
+
+        @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str}: Destination #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str} unknown")
+        @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :no_route})
+        return
       end
 
       def _route_remote_packet(decoded_packet:, packet:, source:)
-        # TODO: Broadcast address support
-        if decoded_packet.net_packet.dest_str != TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.address
-          @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Misrouted")
-          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :misrouted})
-          return
-        end
-
         source_node_obj = @manager.registrations.node_by_address(proto: decoded_packet.proto, address: decoded_packet.net_packet.source_str)
         unless source_node_obj
           @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Unknown source node")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :no_return_route})
           return
         end
-          
+
+        if decoded_packet.net_packet.dest_str == TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.address
+          _rx_remote_packet_to_tun(decoded_packet: decoded_packet, packet: packet, source: source, source_node_obj: source_node_obj)
+          return
+        end
+
+        if TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.broadcast?(decoded_packet.net_packet.dest_str)
+          if TunMesh::CONFIG.values.networking[decoded_packet.proto].enable_broadcast
+            @logger.debug("Packet #{packet.id}: Broadcast packet to the local subnet") 
+            _rx_remote_packet_to_tun(decoded_packet: decoded_packet, packet: packet, source: source, source_node_obj: source_node_obj)
+            return
+          else
+            @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str}: Local Broadcast (Disabled)")
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :config_prohibited})
+            return
+          end
+        end
+        
+        if TunMesh::CONFIG.values.networking[decoded_packet.proto].network_cidr.broadcast?(decoded_packet.net_packet.dest_str)
+          if TunMesh::CONFIG.values.networking[decoded_packet.proto].enable_broadcast
+            @logger.debug("Packet #{packet.id}: Broadcast packet to the routed subnet")
+            _rx_remote_packet_to_tun(decoded_packet: decoded_packet, packet: packet, source: source, source_node_obj: source_node_obj)
+            return
+          else
+            @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str}: WAN Broadcast (Disabled)")
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :config_prohibited})
+            return
+          end
+        end
+        
+        @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Misrouted")
+        @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :misrouted})
+        return
+      end
+
+      def _rx_packet(packet:, source:)
+        raise(ArgumentError, "Expected TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
+        decoded_packet = _decode_packet(packet: packet, source: source)
+        return unless decoded_packet
+
+        if source == :local
+          _route_local_packet(decoded_packet: decoded_packet, packet: packet)
+        else
+          _route_remote_packet(decoded_packet: decoded_packet, packet: packet, source: source)
+        end
+      end
+
+      def _rx_remote_packet_to_tun(decoded_packet:, packet:, source:, source_node_obj:)
         source_id_by_dest_ip = source_node_obj.id
         if source_id_by_dest_ip != source
           @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Recieved from #{source} but route to dest is to #{source_id_by_dest_ip}")
@@ -159,16 +239,10 @@ module TunMesh
         @manager.monitors.increment_gauge(id: :tun_tx_packets)
       end
 
-      def _rx_packet(packet:, source:)
-        raise(ArgumentError, "Expected TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
-        decoded_packet = _decode_packet(packet: packet, source: source)
-        return unless decoded_packet
-
-        if source == :local
-          _route_local_packet(decoded_packet: decoded_packet, packet: packet)
-        else
-          _route_remote_packet(decoded_packet: decoded_packet, packet: packet, source: source)
-        end
+      def _tx_packet(decoded_packet:, packet:, remote_node:)
+        @logger.debug { "TX: Transmitting packet #{packet.id} to #{remote_node.node_info.id} / #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str}" }
+        remote_node.transmit_packet(packet: packet)
+        @manager.monitors.increment_gauge(id: :remote_tx_packets)
       end
     end
   end
