@@ -29,22 +29,6 @@ module TunMesh
           return @address
         end
 
-        def broadcast?(other_address)
-          other_address_obj = NetAddress.parse_cidr("#{other_address}/32")
-          other_address_obj.validate_proto(proto)
-          return false if other_address_obj.proto == :ipv6 # https://docs.oracle.com/cd/E19455-01/806-0916/6ja8539be/index.html
-
-          return true if other_address_obj.to_i == 0xffffffff # 255.255.255.255 Ref: rfc5735
-          return false unless _network_address_obj.include?(other_address_obj.address)
-
-          # Take the network address as an integer, and OR it with the last address in the subnet
-          # Calculate the last address via mask bit math
-          @network_broadcast_address_int ||= (_network_address_obj.to_i | (2**(32 - prefix) - 1))
-          return true if other_address_obj.to_i == @network_broadcast_address_int
-
-          return false
-        end
-
         def include?(other)
           _network_address_obj.include?(other)
         end
@@ -64,7 +48,30 @@ module TunMesh
         def network_address
           _network_address_obj.to_s
         end
-        
+
+        # other_ helpers expected to be run against address setings from config network CIDRs
+        # other_broadcast is because the broadcast address is dependent on the network address, so comparing an address as an argument is logical
+        def other_broadcast?(other_address)
+          other_address_obj = NetAddress.parse_cidr("#{other_address}/32")
+          other_address_obj.validate_proto(proto)
+          return false if other_address_obj.proto == :ipv6 # https://docs.oracle.com/cd/E19455-01/806-0916/6ja8539be/index.html
+
+          return true if other_address_obj.to_i == 0xffffffff # 255.255.255.255 Ref: rfc5735
+          return false unless _network_address_obj.include?(other_address_obj.address)
+
+          # Take the network address as an integer, and OR it with the last address in the subnet
+          # Calculate the last address via mask bit math
+          @network_broadcast_address_int ||= (_network_address_obj.to_i | (2**(32 - prefix) - 1))
+          return true if other_address_obj.to_i == @network_broadcast_address_int
+
+          return false
+        end
+
+        # other_multicast is more for parity with other_broadcast and convenience, as the address we'll need to check will just be a string.
+        def other_multicast?(other)
+          _multicast_network_obj.include?(other)
+        end
+
         def prefix
           _parse_cidr unless @prefix
           return @prefix
@@ -88,6 +95,21 @@ module TunMesh
 
         def _address_obj
           @address_obj ||= IPAddr.new(address)
+        end
+
+        def _multicast_network_cidr
+          case proto
+          when :ipv4
+            '224.0.0.0/4' # RFC5735 / RFC3171
+          when :ipv6
+            'FF00::/8' # RFC5735 / RFC3171
+          else
+            raise("Unknown proto #{proto}")
+          end
+        end
+
+        def _multicast_network_obj
+          @multicast_network_obj ||= IPAddr.new(_multicast_network_cidr)
         end
         
         def _network_address_obj
