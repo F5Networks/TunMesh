@@ -87,7 +87,9 @@ module TunMesh
           raise(Errors::ValueError, "Null value") if field_value.nil? && !field.allow_nil
           
           begin
-            field.load_config_value(value: field_value, config_obj:)
+            field.load_config_value(value: field_value, config_obj: config_obj)
+          rescue Errors::ParseError => exc
+            raise exc
           rescue StandardError => exc
             raise(Errors::ParseError.new("#{exc.class}: #{exc}"))
           end

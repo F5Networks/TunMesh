@@ -27,6 +27,7 @@ EOF
         add_field(
           Types::List.new(
             key: 'bootstrap_node_urls',
+            allow_nil: true,
             allow_empty: true,
             value_type: Types::URL,
             description_short: 'List of URLs to register into on startup',
