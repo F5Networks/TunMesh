@@ -1,0 +1,30 @@
+---
+tun_mesh:
+  config_version: 1.0
+  clustering:
+    bootstrap_node_urls:
+      - https://192.168.128.1:4567
+      - https://192.168.128.1:4568
+
+    control_api_advertise_url: https://192.168.128.1:4569
+    auth:
+      secret: bih0ohBoh4quib4apiehang6ohcahh9yo7eiw9ha
+
+  control_api:
+    ssl:
+      cert_file_path: test_ssl/cert.pem
+      key_file_path: test_ssl/key.pem
+
+  monitoring:
+    method: prometheus
+    prometheus:
+      base_labels:
+        env_name: local_test
+
+  networking:
+    ipv4:
+      network_cidr: 192.168.129.0/24
+      node_address_cidr: 192.168.129.30/26
+
+  process:
+    uid: 100010
