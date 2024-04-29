@@ -5,6 +5,9 @@ module TunMesh
     module Packets
       module IP
         class IPv4 < BinData::Record
+          ETHERTYPE = 0x0800
+          PROTO     = :ipv4
+
           endian :big
 
           bit4 :version, value: 4

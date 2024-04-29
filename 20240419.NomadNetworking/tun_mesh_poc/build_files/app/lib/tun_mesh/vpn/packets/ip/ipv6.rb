@@ -5,6 +5,9 @@ module TunMesh
     module Packets
       module IP
         class IPv6 < BinData::Record
+          ETHERTYPE = 0x86dd
+          PROTO     = :ipv6
+
           endian :big
 
           bit4  :version, value: 6

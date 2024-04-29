@@ -16,6 +16,7 @@ describe TunMesh::IPC::Packet do
     test_config = {
       b64_data: %i[data data_length id md5 md5_raw],
       data:     %i[b64_data data_length id md5 md5_raw],
+      ethertype:    %i[id md5 md5_raw],
       internal_stamp: %i[stamp id md5 md5_raw],
       stamp:    %i[internal_stamp id md5 md5_raw],
     }
@@ -26,7 +27,6 @@ describe TunMesh::IPC::Packet do
       describe attr_name.to_s do
         let(:test_attr_name) { attr_name }
         let(:new_data) { Array.new(rand(2..5)) { SecureRandom.hex }.join }
-
         
         let(:test_value) do
           case attr_name
@@ -36,6 +36,8 @@ describe TunMesh::IPC::Packet do
             new_data
           when :internal_stamp
             rand(1..(2**64))
+          when :ethertype
+            rand(1..(2**16))
           when :stamp
             rand * (2**32)
           else

@@ -2,13 +2,14 @@ require 'logger'
 require './lib/tun_mesh/config'
 require './lib/tun_mesh/ipc/packet'
 require './lib/tun_mesh/ipc/queue_manager'
+require_relative 'ethertypes'
 require_relative 'packets/ip/ipv4'
 require_relative 'packets/ip/ipv6'
 
 module TunMesh
   module VPN
     class Router
-      DECODED_PACKET = Struct.new(:net_packet, :proto)
+      DECODED_PACKET = Struct.new(:net_config, :net_packet, :proto)
 
       def initialize(manager:, queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
@@ -61,31 +62,36 @@ module TunMesh
       def _decode_packet(packet:, source:)
         raise(ArgumentError, "Expected TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
         
-        @logger.debug { "#{packet.id}: Recieved a #{packet.data_length} byte packet with signature #{packet.md5} from #{source}" }
-        # TODO: There is a flag on the tun device to get the actual 16 bit proto value
-        case (packet.data[0].ord & 0xf0)
-        when 0x40
-          ipv4_obj = Packets::IP::IPv4.decode(packet.data)
-          @logger.debug { "#{packet.id}: IPv4: #{ipv4_obj.source_str} -> #{ipv4_obj.dest_str}" }
-
-          return DECODED_PACKET.new(
-                   net_packet: ipv4_obj,
-                   proto: :ipv4
-                 )
-
-        when 0x60
-          ipv6_obj = Packets::IP::IPv6.decode(packet.data)
-          @logger.debug { "#{packet.id}: IPv6: #{ipv6_obj.source_str} -> #{ipv6_obj.dest_str}" }
-
-          # TODO: Pending tun setup & config default handling
-          @logger.debug("Dropping packet #{packet.id} from #{ipv6_obj.source_str} (Self) -> #{ipv6_obj.dest_str}: IPv6 Not supported")
+        @logger.debug do
+          ethertype_name = TunMesh::VPN::Ethertypes.ethertype_name(ethertype: packet.ethertype)
+          "#{packet.id}: Recieved a #{packet.data_length} byte #{ethertype_name} packet with signature #{packet.md5} from #{source}"
+        end
+        
+        net_packet_class = TunMesh::VPN::Ethertypes.l3_packet_by_ethertype(ethertype: packet.ethertype)
+        if net_packet_class.nil?
+          @logger.debug do
+            ethertype_name = TunMesh::VPN::Ethertypes.ethertype_name(ethertype: packet.ethertype)
+            "#{packet.id}: Dropping: Not a supported protocol: #{ethertype_name} (#{sprintf("0x%04x", packet.ethertype)})"
+          end
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unsupported})
           return
         end
 
-        @logger.debug { "#{packet.id}: Dropping: Not a known protocol (0x#{packet.data[0].ord.to_s(16)})" }
-        @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unknown_proto})
-        return
+        net_packet = net_packet_class.decode(packet.data)
+        @logger.debug { "#{packet.id}: #{net_packet_class::PROTO}: #{net_packet.source_str} -> #{net_packet.dest_str}" }
+        
+        unless TunMesh::CONFIG.values.networking.to_h.key?(net_packet_class::PROTO)
+          @logger.debug("Dropping packet #{packet.id} from #{net_packet.source_str} (Self) -> #{net_packet.dest_str}: #{net_packet_class::PROTO} Not supported")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unsupported})
+          return
+        end
+
+        # This struct is mainly convenience for downstream functions, reducing boilerplate references
+        return DECODED_PACKET.new(
+                 net_config: TunMesh::CONFIG.values.networking[net_packet_class::PROTO],
+                 net_packet: net_packet_class.decode(packet.data),
+                 proto: net_packet_class::PROTO
+               )
       end
 
       # Separate thread to prevent the heartbeat queue from filling up
@@ -112,16 +118,16 @@ module TunMesh
       end
       
       def _route_local_packet(decoded_packet:, packet:)
-        if decoded_packet.net_packet.dest_str == TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.address
+        if decoded_packet.net_packet.dest_str == decoded_packet.net_config.node_address_cidr.address
           @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str} (Self): received local")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :loopback})
           return
         end
 
         # Check local broadcast first because of IPv4 255.255.255.255
-        if TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
-          if TunMesh::CONFIG.values.networking[decoded_packet.proto].enable_broadcast
-            if TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.include?(decoded_packet.net_packet.dest_str)
+        if decoded_packet.net_config.node_address_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
+          if decoded_packet.net_config.enable_broadcast
+            if decoded_packet.net_config.node_address_cidr.include?(decoded_packet.net_packet.dest_str)
               # Broadcast to the local broadcast address is not supported, as the tun device is configured with the mesh netmask to get all the traffic for the mesh
               # Sending a local network broadcast address packet to the remote node will appear as a regular unicast dest IP to the receiving kernel
               # This is a implementation limitation.
@@ -132,7 +138,7 @@ module TunMesh
 
             @logger.info("Packet #{packet.id}: Broadcast packet to the local subnet")
             @manager.registrations.nodes_by_proto(proto: decoded_packet.proto).select do |remote_node|
-              TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.include?(remote_node.node_addresses[decoded_packet.proto])
+              decoded_packet.net_config.node_address_cidr.include?(remote_node.node_addresses[decoded_packet.proto])
             end.each do |remote_node|
               _tx_packet(decoded_packet: decoded_packet, packet: packet, remote_node: remote_node)
             end
@@ -145,8 +151,8 @@ module TunMesh
           end
         end
 
-        unless TunMesh::CONFIG.values.networking[decoded_packet.proto].network_cidr.include?(decoded_packet.net_packet.dest_str)
-          if TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.other_multicast?(decoded_packet.net_packet.dest_str)
+        unless decoded_packet.net_config.network_cidr.include?(decoded_packet.net_packet.dest_str)
+          if decoded_packet.net_config.node_address_cidr.other_multicast?(decoded_packet.net_packet.dest_str)
             # Multicast not supported.
             # Routers need to be aware of node multicast subscriptions via protocol support, which we're not supporting.
             @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str}: Multicast not supported")
@@ -165,8 +171,8 @@ module TunMesh
           return
         end
 
-        if TunMesh::CONFIG.values.networking[decoded_packet.proto].network_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
-          if TunMesh::CONFIG.values.networking[decoded_packet.proto].enable_broadcast
+        if decoded_packet.net_config.network_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
+          if decoded_packet.net_config.enable_broadcast
             @logger.info("Packet #{packet.id}: Broadcast packet to the routed subnet")
             @manager.registrations.nodes_by_proto(proto: decoded_packet.proto).each do |remote_node|
               _tx_packet(decoded_packet: decoded_packet, packet: packet, remote_node: remote_node)
@@ -193,13 +199,13 @@ module TunMesh
           return
         end
 
-        if decoded_packet.net_packet.dest_str == TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.address
+        if decoded_packet.net_packet.dest_str == decoded_packet.net_config.node_address_cidr.address
           _rx_remote_packet_to_tun(decoded_packet: decoded_packet, packet: packet, source: source, source_node_obj: source_node_obj)
           return
         end
 
-        if TunMesh::CONFIG.values.networking[decoded_packet.proto].node_address_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
-          if TunMesh::CONFIG.values.networking[decoded_packet.proto].enable_broadcast
+        if decoded_packet.net_config.node_address_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
+          if decoded_packet.net_config.enable_broadcast
             @logger.debug("Packet #{packet.id}: Broadcast packet to the local subnet") 
             _rx_remote_packet_to_tun(decoded_packet: decoded_packet, packet: packet, source: source, source_node_obj: source_node_obj)
             return
@@ -210,8 +216,8 @@ module TunMesh
           end
         end
         
-        if TunMesh::CONFIG.values.networking[decoded_packet.proto].network_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
-          if TunMesh::CONFIG.values.networking[decoded_packet.proto].enable_broadcast
+        if decoded_packet.net_config.network_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
+          if decoded_packet.net_config.enable_broadcast
             @logger.debug("Packet #{packet.id}: Broadcast packet to the routed subnet")
             _rx_remote_packet_to_tun(decoded_packet: decoded_packet, packet: packet, source: source, source_node_obj: source_node_obj)
             return

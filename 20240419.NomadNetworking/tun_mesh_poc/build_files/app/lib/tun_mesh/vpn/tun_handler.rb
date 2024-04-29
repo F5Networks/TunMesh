@@ -32,10 +32,11 @@ module TunMesh
         begin
           @logger.debug("Opening #{TunMesh::CONFIG.values.networking.tun_device_id}")
           tun = RbTunTap::TunDevice.new(TunMesh::CONFIG.values.networking.tun_device_id)
-          tun.open(false)
+          tun.open(true)
 
           # TODO: IPv6 support
           # TODO: IPv6 Not supported upstream: https://github.com/amoghe/rb_tuntap/blob/master/lib/rb_tuntap.rb#L95-L97
+          # TODO: Support shelling out to set up the interface.  This pattern will allow IPv6 and arbitrary extensions.
 
           # Open the device with the local address but the mesh subnet.
           # This will cause all mesh IPs to be sent to this process.
@@ -78,7 +79,7 @@ module TunMesh
                            # TODO: Monitor the age as a metric, optional by source label
                            # TODO: Monitor packets sent node -> node and packets recieved node -> node (Optional)
                            @logger.debug { "Writing #{packet.id}: #{packet.data_length}b, #{Time.now.to_f - packet.stamp}s old" }
-                           tun.to_io.write(packet.data)
+                           tun.to_io.write(packet.to_tun)
                            tun.to_io.flush
                          rescue Errno::EIDRM => exc
                            @logger.warn { "Queue shut down: #{exc.class}: #{exc}" }
@@ -95,13 +96,15 @@ module TunMesh
 
         threads.push(Thread.new do
                        loop do
-                         raw_data = tun.to_io.sysread(tun.mtu)
-                         packet = TunMesh::IPC::Packet.new(data: raw_data)
-                         packet.stamp = Time.now.to_f
+                         raw_data = tun.to_io.sysread(tun.mtu + 4) # +4 for the header
+                         rx_stamp = Time.now.to_f
+                         packet = TunMesh::IPC::Packet.from_tun(raw: raw_data)
+                         packet.stamp = rx_stamp
                          @logger.debug { "Read #{packet.id} #{packet.data_length}b" }
                          @queue_manager.tun_read.push(packet.encode)
                        rescue StandardError => exc
                          @logger.warn { "Failed to read tun device: #{exc.class}: #{exc}" }
+                         @logger.debug { exc.backtrace }
                        end
                      end)
 
