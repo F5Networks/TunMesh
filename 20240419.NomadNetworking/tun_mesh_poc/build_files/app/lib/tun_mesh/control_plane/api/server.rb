@@ -31,7 +31,8 @@ module TunMesh
           puma_bind = [
             "ssl://0.0.0.0:", TunMesh::CONFIG.values.control_api.listen_port,
             "?key=", TunMesh::CONFIG.values.control_api.ssl.key_file_path,
-            "&cert=", TunMesh::CONFIG.values.control_api.ssl.cert_file_path
+            "&cert=", TunMesh::CONFIG.values.control_api.ssl.cert_file_path,
+            "&no_tlsv1=true"
           ]
           Sinatra::Base.set(:bind, puma_bind.join)
 

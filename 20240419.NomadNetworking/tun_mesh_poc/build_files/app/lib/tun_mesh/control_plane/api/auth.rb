@@ -43,7 +43,9 @@ module TunMesh
         end
 
         def remote_node_session_auth(remote_node_id:)
-          @api.client_for_node_id(id: remote_node_id).session_auth
+          remote_client = @api.client_for_node_id(id: remote_node_id)
+          return nil unless remote_client
+          return remote_client.session_auth
         end
 
         def rsa_decrypt(cyphertext:)

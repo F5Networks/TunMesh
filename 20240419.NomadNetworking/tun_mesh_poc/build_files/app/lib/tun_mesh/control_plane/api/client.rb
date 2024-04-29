@@ -222,6 +222,7 @@ module TunMesh
             }
 
             _post_mutual(
+              # TODO: This should try session auth on renewal
               auth: @api_auth.cluster_token,
               path: '/tunmesh/auth/v0/init_session',
               payload: post_payload,
