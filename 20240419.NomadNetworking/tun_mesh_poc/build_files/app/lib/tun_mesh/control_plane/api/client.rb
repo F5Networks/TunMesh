@@ -147,7 +147,6 @@ module TunMesh
           body = resp.body
         end
 
-        # TODO: Rename / flatten
         def _post_mutual(auth:, path:, payload:, valid_response_codes:)
           request = Net::HTTP::Post.new(path)
           raw_payload = payload.to_json

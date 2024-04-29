@@ -89,12 +89,10 @@ module TunMesh
       end
 
       def md5
-        # TODO: More Rubish way
         md5_raw.bytes.map { |b| sprintf("%02x", b) }.join
       end
 
       def stamp
-        # TODO: better way
         internal_stamp.to_f / (2**30)
       end
 

@@ -17,7 +17,6 @@ module TunMesh
           @rsa_private = OpenSSL::PKey::RSA.generate 2048
         end
 
-        # TODO: Inconsisten naming 
         def cluster_token
           @cluster_token ||= Token.new(id: 'Cluster Auth', secret: TunMesh::CONFIG.values.clustering.auth.secret).freeze
         end

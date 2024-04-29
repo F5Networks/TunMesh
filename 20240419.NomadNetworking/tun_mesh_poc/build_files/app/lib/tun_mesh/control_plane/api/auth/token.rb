@@ -75,7 +75,8 @@ module TunMesh
           end
 
           private
-          
+
+          # TODO: Packet payloads already have a md5, that should be reused
           def _payload_sig(payload:)
             Digest::SHA256.hexdigest(payload)
           end

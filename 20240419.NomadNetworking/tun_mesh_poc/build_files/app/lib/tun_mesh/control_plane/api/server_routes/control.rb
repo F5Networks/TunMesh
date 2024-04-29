@@ -50,7 +50,7 @@ module TunMesh
             begin
               body = request.body.read
               Helpers.ensure_mutual_auth(
-                auth: settings.api_auth.cluster_token, # TODO: Inconsistent naming
+                auth: settings.api_auth.cluster_token,
                 body: body,
                 context: self
               ) do |remote_node_id|
