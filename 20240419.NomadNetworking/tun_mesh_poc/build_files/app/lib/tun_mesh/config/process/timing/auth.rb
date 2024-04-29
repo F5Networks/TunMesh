@@ -14,6 +14,14 @@ module TunMesh
 
             add_field(
               Types::Timing.new(
+                key: 'session_max_age',
+                default: 3600,
+                description_short: 'Maximum number of seconds for a session auth token to be valid'
+              )
+            )
+
+            add_field(
+              Types::Timing.new(
                 key: 'early_validity_window',
                 default: 5.0,
                 description_short: 'Number of seconds before issue auth tokens will be valid.',

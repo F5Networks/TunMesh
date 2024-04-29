@@ -24,19 +24,6 @@ module TunMesh
           @api_client ||= @manager.api.new_client(remote_id: registration.local.id, remote_url: registration.local.listen_url)
         end
         
-        def api_session_auth(rotate: false)
-          return @api_session_auth if @api_session_auth && !rotate
-          raise("Remote ID unknown, cannot instantiate auth") unless id
-
-          @api_session_auth = Auth.new(
-            id: id,
-            manager: @manager,
-            secret: Auth.random_secret
-          )
-
-          return api_session_auth
-        end
-        
         def close
           unless @transmit_queue.closed?
             @transmit_queue.close

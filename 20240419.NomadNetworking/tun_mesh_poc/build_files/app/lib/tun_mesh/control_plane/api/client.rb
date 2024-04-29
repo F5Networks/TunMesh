@@ -46,55 +46,53 @@ module TunMesh
           @logger.debug("Initialized")
         end
 
-        def remote_pubkey
-          @remote_rsa_pubkey ||= OpenSSL::PKey::RSA.new(_get_unauthed(path: '/tunmesh/auth/v0/rsa_public', expected_content_type: 'text/plain'))
-        end
+        def groom_auth
+          if @session_auth_age
+            session_age = Time.now.to_i -  @session_auth_age
+            if session_age > TunMesh::CONFIG.values.process.timing.auth.session_max_age
+              @logger.info("Session auth #{session_age}s old: Rotating")
 
-        def session_auth
-          return @session_auth if @session_auth
+              begin
+                _new_session_auth
+              rescue StandardError => exc
+                @logger.error("Failed to rotate session auth: #{exc.class}: #{exc}")
+                @logger.error("Invalidating expired session")
+                @session_auth = nil
+                @session_auth_age = nil
 
-          @session_auth_lock.synchronize do
-            @logger.debug("Initializing new session auth")
-            new_secret = Auth::Token.random_secret
-            new_token = Auth::Token.new(
-              id: SecureRandom.uuid,
-              secret: new_secret
-            )
-
-            post_payload = {
-              id: new_token.id,
-              secret: Base64.encode64(remote_pubkey.public_encrypt(new_secret))
-            }
-
-            _post_mutual(
-              auth: @api_auth.cluster_token,
-              path: '/tunmesh/auth/v0/init_session',
-              payload: post_payload,
-              valid_response_codes: [204]
-            )
-
-            @session_auth = new_token
+                raise exc
+              end
+            end
           end
 
-          @logger.debug("New sesson auth initialized successfully")
-          return @session_auth
-        end
-
-        def session_auth=(new_auth)
-          raise(ArgumentError, "new_auth is not a Auth::Token, got #{new_auth.class}") unless new_auth.is_a? Auth::Token
-          @session_auth = new_auth
+          session_auth
         end
 
         def register(payload:)
           raise(ArgumentError, "Payload must be a TunMesh::ControlPlane::Structs::Registration, got #{payload.class}") unless payload.is_a? TunMesh::ControlPlane::Structs::Registration
 
-          # This doesn't use session auth as, until we're registered on the other side, there is no client object on the remote side to take the token
-          return _post_mutual(
-            auth: @api_auth.cluster_token,
-            path: '/tunmesh/control/v0/registrations/register',
-            payload: payload,
-            valid_response_codes: [200]
-          )
+          return _register_bootstrap(payload: payload) unless @session_auth
+
+          begin
+            return _register_session(payload: payload)
+          rescue RequestException => exc
+            case exc.code.to_s
+            when '404'
+              @logger.warn("Re-registration returned 404: This node not known to the remote node")
+            when '401'
+              @logger.warn("Re-registration returned 401: Remote rejected session auth")
+            else
+              raise exc
+            end
+          end
+
+          @logger.warn("Resetting session auth due to re-registration failure")
+          @session_auth = nil
+          return _register_bootstrap(payload: payload)
+        end
+
+        def remote_pubkey
+          @remote_rsa_pubkey ||= OpenSSL::PKey::RSA.new(_get_unauthed(path: '/tunmesh/auth/v0/rsa_public', expected_content_type: 'text/plain'))
         end
 
         def remote_id
@@ -116,6 +114,15 @@ module TunMesh
           end
         end
         
+        def session_auth
+          @session_auth ||= _new_session_auth
+        end
+
+        def session_auth=(new_auth)
+          raise(ArgumentError, "new_auth is not a Auth::Token, got #{new_auth.class}") unless new_auth.is_a? Auth::Token
+          @session_auth = new_auth
+        end
+
         def transmit_packet(packet:)
           raise(ArgumentError, "Packet must be a TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
           return _post_mutual(
@@ -195,6 +202,63 @@ module TunMesh
           end
 
           return body
+        end
+
+        # Register to the other node, in bootstrap mode using the cluster token
+        # This should only happen on boot, if it's a regular fallback something is wrong.
+        def _register_bootstrap(payload:)
+          @logger.info { "Registering to #{remote_id} in bootstrap mode using the cluster token." }
+
+          # This doesn't use session auth as, until we're registered on the other side, there is no client object on the remote side to take the token
+          return _post_mutual(
+            auth: @api_auth.cluster_token,
+            path: '/tunmesh/control/v0/registrations/register',
+            payload: payload,
+            valid_response_codes: [200]
+          )
+        end
+
+        # Re-register to the other node using the session token
+        # This is the normal re-registration process, which also serves as a check and self-heal trigger on the session token.
+        def _register_session(payload:)
+          @logger.debug { "Registering to #{remote_id} using the session token" }
+
+          # This doesn't use session auth as, until we're registered on the other side, there is no client object on the remote side to take the token
+          return _post_mutual(
+            auth: session_auth,
+            path: "/tunmesh/control/v0/registrations/register/#{TunMesh::CONFIG.node_id}",
+            payload: payload,
+            valid_response_codes: [200]
+          )
+        end
+
+        def _new_session_auth
+          @session_auth_lock.synchronize do
+            @logger.debug("Initializing new session auth")
+            new_secret = Auth::Token.random_secret
+            new_token = Auth::Token.new(
+              id: SecureRandom.uuid,
+              secret: new_secret
+            )
+
+            post_payload = {
+              id: new_token.id,
+              secret: Base64.encode64(remote_pubkey.public_encrypt(new_secret))
+            }
+
+            _post_mutual(
+              auth: @api_auth.cluster_token,
+              path: '/tunmesh/auth/v0/init_session',
+              payload: post_payload,
+              valid_response_codes: [204]
+            )
+
+            @session_auth_age = Time.now.to_i
+            @session_auth = new_token
+          end
+          
+          @logger.debug("New sesson auth initialized successfully")
+          return @session_auth
         end
       end
     end

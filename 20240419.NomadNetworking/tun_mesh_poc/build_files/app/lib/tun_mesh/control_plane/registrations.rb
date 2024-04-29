@@ -98,7 +98,12 @@ module TunMesh
           return
         end
 
-        @remote_nodes.ids.each { |id| _update_registration(id: id) }
+        @remote_nodes.ids.each do |id|
+          # Ensure nodes have session auth
+          @remote_nodes.node_by_id(id).api_client.groom_auth
+
+          _update_registration(id: id)
+        end
         @remote_nodes.groom!
       end
 
@@ -120,6 +125,7 @@ module TunMesh
             _register(api_client: remote_node.api_client)
           rescue StandardError => exc
             @logger.warn("Failed to register to node #{id}: #{exc.class}: #{exc}")
+            @logger.debug { exc.backtrace }
             return
           end
         end
