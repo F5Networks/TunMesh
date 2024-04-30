@@ -110,6 +110,7 @@ module TunMesh
 
         loop do
           break unless threads.map(&:alive?).all?
+
           @queue_manager.tun_heartbeat.push(Time.now.to_f)
           sleep(TunMesh::CONFIG.values.process.timing.tun_handler.heartbeat_interval)
         end

@@ -54,6 +54,7 @@ module TunMesh
 
         def _set_attr(name, raw_value)
           raise(ArgumentError, "#{self.class}: INTERNAL ERROR: Unknown field #{name}") unless self.class::FIELDS[name]
+
           begin
             value = _parse_value(expected_type: self.class::FIELDS[name].fetch(:type), value: raw_value)
           rescue ArgumentError => exc
@@ -78,13 +79,15 @@ module TunMesh
               begin
                 parsed_key = _parse_value(expected_type: self.class::FIELDS[name][:key_type], value: key)
               rescue ArgumentError => exc
-                raise(ArgumentError, "#{self.class}: #{name} must be a map of #{self.class::FIELDS[name][:key_type]} => #{self.class::FIELDS[name][:val_type]} pairs, #{name} is a #{name.class}") unless name.is_a?(self.class::FIELDS[name][:key_type])
+                raise(ArgumentError,
+                      "#{self.class}: #{name} must be a map of #{self.class::FIELDS[name][:key_type]} => #{self.class::FIELDS[name][:val_type]} pairs, #{name} is a #{name.class}") unless name.is_a?(self.class::FIELDS[name][:key_type])
               end
 
               begin
                 parsed_value = _parse_value(expected_type: self.class::FIELDS[name][:val_type], value: subval)
               rescue ArgumentError => exc
-                raise(ArgumentError, "#{self.class}: #{name} must be an array of #{self.class::FIELDS[name][:val_type]}, object at #{key} is #{subval.class}") unless subval.is_a?(self.class::FIELDS[name][:val_type])
+                raise(ArgumentError,
+                      "#{self.class}: #{name} must be an array of #{self.class::FIELDS[name][:val_type]}, object at #{key} is #{subval.class}") unless subval.is_a?(self.class::FIELDS[name][:val_type])
               end
 
               [parsed_key, parsed_value]

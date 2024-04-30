@@ -26,10 +26,12 @@ module TunMesh
       def initialize(control: false, queue_key: nil)
         raise(ArgumentError, "Control and queue_key are exclusive") if control && queue_key
         raise(ArgumentError, "queue_key must be specified when not in control") if !control && !queue_key
+
         @control = control
 
         if queue_key
           raise("CONFIG ERROR: The last 4 bits of the IPC Queue ID are reserved") if (queue_key & 0x0f) != 0
+
           @queue_key = queue_key
         end
 

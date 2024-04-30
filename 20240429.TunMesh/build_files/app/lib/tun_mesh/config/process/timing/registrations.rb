@@ -18,12 +18,12 @@ module TunMesh
                 key: 'groom_interval',
                 default: 5.0,
                 description_short: 'Delay between grooming the remote node list',
-                description_long: <<EOF
-Grooming entails:
- - Updating registrations to other nodes
- - Removing stale / unhealthy remote node data
-Longer intervals will result in propagation delays of node/address changes in the cluster.
-EOF
+                description_long: <<~EOF
+                  Grooming entails:
+                   - Updating registrations to other nodes
+                   - Removing stale / unhealthy remote node data
+                  Longer intervals will result in propagation delays of node/address changes in the cluster.
+                EOF
               )
             )
 

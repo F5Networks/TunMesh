@@ -109,10 +109,10 @@ module TunMesh
 
       def _register(api_client:)
         return process_registration(
-                 api_client: api_client,
-                 raw_payload: api_client.register(payload: outbound_registration_payload),
-                 remote_node_id: api_client.remote_id
-               )
+          api_client: api_client,
+          raw_payload: api_client.register(payload: outbound_registration_payload),
+          remote_node_id: api_client.remote_id
+        )
       end
 
       def _update_registration(id:)

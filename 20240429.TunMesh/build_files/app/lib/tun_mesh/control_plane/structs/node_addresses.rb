@@ -8,11 +8,10 @@ module TunMesh
       # This class represents a set of addresses for the node
       class NodeAddresses < Base
         FIELDS = TunMesh::Config::Networking::SUPPORTED_PROTOCOLS.to_h do |proto|
-          [ proto,
-            {
-            type: NetAddress
-            }
-          ]
+          [proto,
+           {
+             type: NetAddress
+           }]
         end
       end
 

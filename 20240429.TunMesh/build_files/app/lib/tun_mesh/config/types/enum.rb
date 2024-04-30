@@ -17,7 +17,7 @@ module TunMesh
           lines += description_long.split("\n") if description_long
           lines.push("One of:")
           @allowed_values_description.each_pair do |value, description|
-            lines.push(" - #{value}:#{ value == default ? ' (Default)' : ''} #{description}")
+            lines.push(" - #{value}:#{value == default ? ' (Default)' : ''} #{description}")
           end
 
           return lines

@@ -33,13 +33,13 @@ module TunMesh
           @logger = Logger.new(STDERR, progname: "#{self.class}(#{self.remote_id}@#{@remote_url})")
 
           @persistent_http = PersistentHTTP.new(
-            :name         => "#{self.class}(#{@remote_url})",
-            :logger       => @logger,
-            :pool_size    => 3, # Only expected to be accessed by the Registrations::RemoteNode worker and the Registrations worker
+            :name => "#{self.class}(#{@remote_url})",
+            :logger => @logger,
+            :pool_size => 3, # Only expected to be accessed by the Registrations::RemoteNode worker and the Registrations worker
             :pool_timeout => 5,
             :warn_timeout => 0.25,
-            :force_retry  => true,
-            :url          => @remote_url
+            :force_retry => true,
+            :url => @remote_url
           )
 
           @session_auth_lock = Mutex.new
@@ -48,7 +48,7 @@ module TunMesh
 
         def groom_auth
           if @session_auth_age
-            session_age = Time.now.to_i -  @session_auth_age
+            session_age = Time.now.to_i - @session_auth_age
             if session_age > TunMesh::CONFIG.values.process.timing.auth.session_max_age
               @logger.info("Session auth #{session_age}s old: Rotating")
 
@@ -106,6 +106,7 @@ module TunMesh
 
             raise(RequestException.new("HTTP #{resp.code}", resp.code)) if resp.code != 200
             raise(RequestException.new("Invalid response", resp.code)) unless resp['id']
+
             @remote_id = resp['id']
 
             return @remote_id
@@ -120,11 +121,13 @@ module TunMesh
 
         def session_auth=(new_auth)
           raise(ArgumentError, "new_auth is not a Auth::Token, got #{new_auth.class}") unless new_auth.is_a? Auth::Token
+
           @session_auth = new_auth
         end
 
         def transmit_packet(packet:)
           raise(ArgumentError, "Packet must be a TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
+
           return _post_mutual(
             auth: session_auth,
             path: "/tunmesh/control/v0/packet/rx/#{TunMesh::CONFIG.node_id}",

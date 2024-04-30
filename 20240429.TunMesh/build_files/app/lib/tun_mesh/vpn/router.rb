@@ -73,7 +73,7 @@ module TunMesh
             ethertype_name = TunMesh::VPN::Ethertypes.ethertype_name(ethertype: packet.ethertype)
             "#{packet.id}: Dropping: Not a supported protocol: #{ethertype_name} (#{sprintf("0x%04x", packet.ethertype)})"
           end
-          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unsupported})
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :unsupported })
           return
         end
 
@@ -82,16 +82,16 @@ module TunMesh
 
         unless TunMesh::CONFIG.values.networking.to_h.key?(net_packet_class::PROTO)
           @logger.debug("Dropping packet #{packet.id} from #{net_packet.source_str} (Self) -> #{net_packet.dest_str}: #{net_packet_class::PROTO} Not supported")
-          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unsupported})
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :unsupported })
           return
         end
 
         # This struct is mainly convenience for downstream functions, reducing boilerplate references
         return DECODED_PACKET.new(
-                 net_config: TunMesh::CONFIG.values.networking[net_packet_class::PROTO],
-                 net_packet: net_packet_class.decode(packet.data),
-                 proto: net_packet_class::PROTO
-               )
+          net_config: TunMesh::CONFIG.values.networking[net_packet_class::PROTO],
+          net_packet: net_packet_class.decode(packet.data),
+          proto: net_packet_class::PROTO
+        )
       end
 
       # Separate thread to prevent the heartbeat queue from filling up
@@ -120,7 +120,7 @@ module TunMesh
       def _route_local_packet(decoded_packet:, packet:)
         if decoded_packet.net_packet.dest_str == decoded_packet.net_config.node_address_cidr.address
           @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str} (Self): received local")
-          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :loopback})
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :loopback })
           return
         end
 
@@ -132,7 +132,7 @@ module TunMesh
               # Sending a local network broadcast address packet to the remote node will appear as a regular unicast dest IP to the receiving kernel
               # This is a implementation limitation.
               @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str}: Local Broadcast to subnet broadcast address not supported")
-              @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unsupported})
+              @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :unsupported })
               return
             end
 
@@ -146,7 +146,7 @@ module TunMesh
             return
           else
             @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str}: Local Broadcast (Disabled)")
-            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :config_prohibited})
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :config_prohibited })
             return
           end
         end
@@ -156,10 +156,10 @@ module TunMesh
             # Multicast not supported.
             # Routers need to be aware of node multicast subscriptions via protocol support, which we're not supporting.
             @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str}: Multicast not supported")
-            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unsupported})
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :unsupported })
           else
             @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str}: Outside configured network")
-            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :outside_configured_network})
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :outside_configured_network })
           end
 
           return
@@ -181,13 +181,13 @@ module TunMesh
             return
           else
             @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str}: WAN Broadcast (Disabled)")
-            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :config_prohibited})
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :config_prohibited })
             return
           end
         end
 
         @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str}: Destination #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str} unknown")
-        @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :no_route})
+        @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :no_route })
         return
       end
 
@@ -195,7 +195,7 @@ module TunMesh
         source_node_obj = @manager.registrations.node_by_address(proto: decoded_packet.proto, address: decoded_packet.net_packet.source_str)
         unless source_node_obj
           @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Unknown source node")
-          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :no_return_route})
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :no_return_route })
           return
         end
 
@@ -211,7 +211,7 @@ module TunMesh
             return
           else
             @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str}: Local Broadcast (Disabled)")
-            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :config_prohibited})
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :config_prohibited })
             return
           end
         end
@@ -223,18 +223,19 @@ module TunMesh
             return
           else
             @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str}: WAN Broadcast (Disabled)")
-            @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :config_prohibited})
+            @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :config_prohibited })
             return
           end
         end
 
         @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Misrouted")
-        @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :misrouted})
+        @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :misrouted })
         return
       end
 
       def _rx_packet(packet:, source:)
         raise(ArgumentError, "Expected TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
+
         decoded_packet = _decode_packet(packet: packet, source: source)
         return unless decoded_packet
 
@@ -249,14 +250,14 @@ module TunMesh
         source_id_by_dest_ip = source_node_obj.id
         if source_id_by_dest_ip != source
           @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Recieved from #{source} but route to dest is to #{source_id_by_dest_ip}")
-          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :route_conflict})
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :route_conflict })
           return
         end
 
         unless tun_healthy?
           # This is a protection against filling up the queue if the other end is down.
           @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Tun unhealthy")
-          @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :tun_issue})
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :tun_issue })
           return
         end
 

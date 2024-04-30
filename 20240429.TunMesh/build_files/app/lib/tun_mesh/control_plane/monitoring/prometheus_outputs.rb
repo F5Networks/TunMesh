@@ -31,10 +31,10 @@ module TunMesh
         def increment_gauge(id:, by: 1, labels: {})
           raise(ArgumentError, "Unknown monitor ID #{id}") unless @outputs.key?(id)
 
-            @outputs[id].increment(
-              by: by, # by
-              labels: _complete_labels(labels: labels)
-            )
+          @outputs[id].increment(
+            by: by, # by
+            labels: _complete_labels(labels: labels)
+          )
         end
 
         def set_gauge(id:, value:, labels: {})

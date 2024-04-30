@@ -23,7 +23,7 @@ module TunMesh
 
       def description_block_lines
         lines = []
-        lines.push("#{key} group#{ required ? '' : ' [Optional]'}: #{description_short}")
+        lines.push("#{key} group#{required ? '' : ' [Optional]'}: #{description_short}")
         lines += description_long.split("\n") if description_long
 
         return lines

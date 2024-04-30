@@ -13,11 +13,13 @@ module TunMesh
 
         def default_description
           return nil if required
+
           "Default value: #{_config_default}"
         end
 
         def example_value_lines
           return ["# #{key}: #{_config_default}"] unless required
+
           super
         end
 

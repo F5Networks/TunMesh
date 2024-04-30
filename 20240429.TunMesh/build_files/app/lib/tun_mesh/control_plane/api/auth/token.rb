@@ -34,18 +34,18 @@ module TunMesh
           def new_token(payload:, remote_node_id:)
             iat = Time.now.to_i
             return JWT.encode(
-                     {
-                       iss: TunMesh::CONFIG.node_id,
-                       iat: iat,
-                       nbf: (iat - TunMesh::CONFIG.values.process.timing.auth.early_validity_window),
-                       exp: (iat + TunMesh::CONFIG.values.process.timing.auth.validity_window),
-                       aud: remote_node_id,
-                       sig: _payload_sig(payload: payload),
-                       sub: @id,
-                     },
-                     @secret,
-                     JWT_ALGORITHM
-                   )
+              {
+                iss: TunMesh::CONFIG.node_id,
+                iat: iat,
+                nbf: (iat - TunMesh::CONFIG.values.process.timing.auth.early_validity_window),
+                exp: (iat + TunMesh::CONFIG.values.process.timing.auth.validity_window),
+                aud: remote_node_id,
+                sig: _payload_sig(payload: payload),
+                sub: @id,
+              },
+              @secret,
+              JWT_ALGORITHM
+            )
           end
 
           def verify(payload:, token:)
@@ -55,6 +55,7 @@ module TunMesh
 
             raise(AuthError, "Audience Mismatch.  Expected #{TunMesh::CONFIG.node_id}, got #{claims.fetch(:aud)}") if claims.fetch(:aud) != TunMesh::CONFIG.node_id
             raise(AuthError, "Subject Mismatch.  Expected #{@id}, got #{claims.fetch(:sub)}") if claims.fetch(:sub) != @id
+
             sig = _payload_sig(payload: payload)
             raise(AuthError, "Signature Mismatch.  Expected #{sig}, got #{claims.fetch(:sig)}") if claims.fetch(:sig) != sig
 
@@ -71,6 +72,7 @@ module TunMesh
 
             split_auth_header = header_value.split
             raise(AuthError, 'Invalid authorization header') if split_auth_header.length != 2 || split_auth_header[0].downcase != 'bearer:'
+
             verify(payload: payload, token: split_auth_header[1])
           end
 
@@ -85,7 +87,3 @@ module TunMesh
     end
   end
 end
-
-
-
-

@@ -23,6 +23,7 @@ module TunMesh
 
         def default_description
           return nil if required
+
           "Default value: #{default}"
         end
 
@@ -48,6 +49,7 @@ module TunMesh
 
         def example_value_lines
           return ["#{key}: [Deployment Unique Value]"] if required
+
           return ["# #{key}: #{default}"]
         end
 
@@ -69,6 +71,7 @@ module TunMesh
 
         def value
           return @value if @value
+
           return default
         end
 

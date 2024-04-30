@@ -21,7 +21,8 @@ module TunMesh
           ]
 
           return lines if required
-          return lines.map { |l| "# #{l}"}
+
+          return lines.map { |l| "# #{l}" }
         end
 
         def load_config_value(value:, **kwargs)

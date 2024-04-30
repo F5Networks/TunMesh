@@ -30,7 +30,7 @@ module TunMesh
       end
 
       # Push/pop naming is trying to follow https://ruby-doc.org/core-2.5.1/Queue.html
-      def pop(non_block=false)
+      def pop(non_block = false)
         if non_block
           return @mq.receive(0, SysVMQ::IPC_NOWAIT)
         else
@@ -44,4 +44,3 @@ module TunMesh
     end
   end
 end
-

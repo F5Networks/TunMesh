@@ -34,10 +34,10 @@ module TunMesh
                 key: 'validity_window',
                 default: 30.0,
                 description_short: 'Number of seconds from issue auth tokens will be valid',
-                description_long: <<EOF
-Must be long enough for processing, transport, and any acceptable clock drift between nodes in the cluster.
-Note that this window is only for a single request, auth tokens are not reused.
-EOF
+                description_long: <<~EOF
+                  Must be long enough for processing, transport, and any acceptable clock drift between nodes in the cluster.
+                  Note that this window is only for a single request, auth tokens are not reused.
+                EOF
               )
             )
           end

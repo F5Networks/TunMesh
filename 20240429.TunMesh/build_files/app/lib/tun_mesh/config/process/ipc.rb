@@ -9,11 +9,11 @@ module TunMesh
           super(
             key: 'ipc',
             description_short: 'Internal process IPC settings',
-            description_long: <<EOF
-This app forks subprocesses for parallel processing and separation of tasks.
-IPC is via SysV APIs.
-IPC is internal to the app, so no special container level IPC settings are required.
-EOF
+            description_long: <<~EOF
+              This app forks subprocesses for parallel processing and separation of tasks.
+              IPC is via SysV APIs.
+              IPC is internal to the app, so no special container level IPC settings are required.
+            EOF
           )
 
           add_field(Process::IPC::IPCGroup.new)

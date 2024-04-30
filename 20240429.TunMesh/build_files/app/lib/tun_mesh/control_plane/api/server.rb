@@ -42,6 +42,7 @@ module TunMesh
         def self._set_route_args(kwargs:, route:)
           route::REQUIRED_ARGS.each do |arg_name|
             raise(ArgumentError, "Missing required argument #{arg_name}") unless kwargs.key? arg_name
+
             # https://sinatrarb.com/configuration.html
             # https://stackoverflow.com/questions/9657202/pass-arguments-to-new-sinatra-app/9657478#9657478
             route.set(arg_name, kwargs.fetch(arg_name))
@@ -51,6 +52,3 @@ module TunMesh
     end
   end
 end
-
-
-

@@ -31,7 +31,7 @@ module TunMesh
             unless @transmit_queue.empty?
               pending_packets = @transmit_queue.length
               @logger.warn("Closing: Dropping #{@transmit_queue.length} messages")
-              @manager.monitors.increment_gauge(id: :dropped_packets, by: pending_packets, labels: {reason: :node_close})
+              @manager.monitors.increment_gauge(id: :dropped_packets, by: pending_packets, labels: { reason: :node_close })
             end
           end
 
@@ -101,14 +101,17 @@ module TunMesh
 
         def transmit_packet(packet:)
           raise("No worker") unless _transmit_worker.alive?
+
           @transmit_queue.push(packet)
         end
 
         def update_registration(new_registration)
           raise(ArgumentError, "new_registration not a Structs::Registration, got #{new_registration.class}") unless new_registration.is_a?(Structs::Registration)
+
           @api_client = nil unless new_registration.local.listen_url == @api_client&.remote_url
 
           raise("ID Mismatch #{id} / #{new_registration.local.id}") if id != new_registration.local.id
+
           # Changing IPs is not supported.  This breaks a caching assumptions in RemoteNodePool
           new_node_addresses = _node_addresses(tgt_registration: new_registration)
           raise("Node addresses changed from #{node_addresses} to #{new_node_addresses}") if node_addresses != new_node_addresses
@@ -149,7 +152,7 @@ module TunMesh
                 packet_age = Time.now.to_f - packet.stamp
                 if packet_age > TunMesh::CONFIG.values.process.timing.network[_timing_config_key].packet_expiration
                   @logger.warn("Dropping packet #{packet.id}: Expired: #{packet_age}s old")
-                  @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :expired})
+                  @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :expired })
                   next
                 end
 
@@ -158,7 +161,7 @@ module TunMesh
               rescue StandardError => exc
                 @logger.warn("transmit_worker: Iteration caught exception: #{exc.class}: #{exc}")
                 @logger.warn("Dropping packet #{packet.id}: Exception") if packet&.id
-                @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :exception})
+                @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :exception })
               end
             end
           ensure
@@ -170,5 +173,3 @@ module TunMesh
     end
   end
 end
-
-

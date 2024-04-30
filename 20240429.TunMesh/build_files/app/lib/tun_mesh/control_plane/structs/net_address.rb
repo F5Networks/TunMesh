@@ -1,7 +1,6 @@
 require 'ipaddr'
 require_relative 'base'
 
-
 module TunMesh
   module ControlPlane
     module Structs

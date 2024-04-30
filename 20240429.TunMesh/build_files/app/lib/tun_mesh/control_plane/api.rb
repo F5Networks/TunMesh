@@ -17,7 +17,7 @@ module TunMesh
       end
 
       def new_client(**kwargs)
-        return Client.new(**{api_auth: @auth}.merge(kwargs))
+        return Client.new(**{ api_auth: @auth }.merge(kwargs))
       end
 
       def run!(&block)

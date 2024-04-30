@@ -162,7 +162,7 @@ module TunMesh
         0x9003 => '3Com(Bridge) loop detect',
         0x9A22 => 'Multi-Topology',
         0xA0ED => 'LoWPAN encapsulation',
-        #0xB7EA => 'The Ethertype will be used to identify a "Channel" in which control messages are encapsulated as payload of GRE packets. When a GRE packet tagged with the Ethertype is received, the payload will be handed to the network processor for processing.',
+        # 0xB7EA => 'The Ethertype will be used to identify a "Channel" in which control messages are encapsulated as payload of GRE packets. When a GRE packet tagged with the Ethertype is received, the payload will be handed to the network processor for processing.',
         0xFF00 => 'BBN VITAL-LanBridge cache private protocol.',
         0xFFFF => 'Reserved'
       }.freeze

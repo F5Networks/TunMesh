@@ -19,10 +19,10 @@ module TunMesh
               required: false,
               value_type: Types::String,
               description_short: 'Map of labels to add to all metrics',
-              description_long: <<EOF
-Intended for adding environment labels like environment name
-The process node_id will be added automatically as a base label by default.
-EOF
+              description_long: <<~EOF
+                Intended for adding environment labels like environment name
+                The process node_id will be added automatically as a base label by default.
+              EOF
             )
           )
         end

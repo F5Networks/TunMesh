@@ -13,7 +13,7 @@ module TunMesh
           @nodes = {}
 
           @node_lookup_lock = Mutex.new
-          @node_ids_by_address = Hash.new { |h,k| h[k] = {} }
+          @node_ids_by_address = Hash.new { |h, k| h[k] = {} }
           @node_ids_by_address_lock = Mutex.new
         end
 
@@ -101,6 +101,7 @@ module TunMesh
         def _finalize_node(id:)
           node = node_by_id(id)
           raise("INTERNAL ERROR: Attempted to remove unknown node #{id}") unless node
+
           node.close
 
           @node_ids_by_address_lock.synchronize do
@@ -124,7 +125,6 @@ module TunMesh
 
           return node
         end
-
 
         def _sync_node_addresses(updated_node:)
           @node_ids_by_address_lock.synchronize do

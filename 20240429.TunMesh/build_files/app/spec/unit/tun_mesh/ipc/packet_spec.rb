@@ -15,10 +15,10 @@ describe TunMesh::IPC::Packet do
   describe 'r/w attributes' do
     test_config = {
       b64_data: %i[data data_length id md5 md5_raw],
-      data:     %i[b64_data data_length id md5 md5_raw],
-      ethertype:    %i[id md5 md5_raw],
+      data: %i[b64_data data_length id md5 md5_raw],
+      ethertype: %i[id md5 md5_raw],
       internal_stamp: %i[stamp id md5 md5_raw],
-      stamp:    %i[internal_stamp id md5 md5_raw],
+      stamp: %i[internal_stamp id md5 md5_raw],
     }
 
     test_config.each_pair do |attr_name, dependent_attrs|

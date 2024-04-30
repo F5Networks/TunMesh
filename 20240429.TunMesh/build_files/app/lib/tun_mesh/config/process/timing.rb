@@ -12,11 +12,11 @@ module TunMesh
           super(
             key: 'timing',
             description_short: 'Timing: Process timing delays and values',
-            description_long: <<EOF
-All values are durations/intervals.
-Integer values are seconds.
-Suffixed values of the form [integer value][smhd] are supported, where s is seconds, m is minutes, h is hours, and d is days.
-EOF
+            description_long: <<~EOF
+              All values are durations/intervals.
+              Integer values are seconds.
+              Suffixed values of the form [integer value][smhd] are supported, where s is seconds, m is minutes, h is hours, and d is days.
+            EOF
           )
 
           add_field(Process::Timing::Auth.new)

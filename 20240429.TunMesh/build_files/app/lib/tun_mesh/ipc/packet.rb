@@ -123,10 +123,10 @@ module TunMesh
 
       def _calculate_raw_md5
         Digest::MD5.digest([
-                             data,
-                             ethertype,
-                             internal_stamp
-                           ].join)
+          data,
+          ethertype,
+          internal_stamp
+        ].join)
       end
     end
   end

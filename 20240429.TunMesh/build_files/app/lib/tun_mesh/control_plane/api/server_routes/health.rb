@@ -14,7 +14,7 @@ module TunMesh
 
           get '/health' do
             if settings.manager.healthy?
-                status 200
+              status 200
             else
               status 503
             end
