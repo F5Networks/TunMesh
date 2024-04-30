@@ -46,7 +46,7 @@ module TunMesh
 
       def tun_healthy?
         if @last_tun_heartbeat == 0
-          @logger.error("Tunnel process unhealthy: No heartbeat")
+          @logger.error('Tunnel process unhealthy: No heartbeat')
           return false
         end
 

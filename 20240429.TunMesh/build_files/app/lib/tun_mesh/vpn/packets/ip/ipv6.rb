@@ -44,7 +44,7 @@ module TunMesh
           private
 
           def _int_to_ip(ip_int)
-            full_str = Array.new(16) { |i| (ip_int >> (i * 8)) & 0xff }.reverse.each_slice(2).to_a.map { |s| sprintf("%02x%02x", *s) }.join(':')
+            full_str = Array.new(16) { |i| (ip_int >> (i * 8)) & 0xff }.reverse.each_slice(2).to_a.map { |s| sprintf('%02x%02x', *s) }.join(':')
             return full_str.gsub(/:0+/, ':').gsub(/::+/, '::')
           end
         end

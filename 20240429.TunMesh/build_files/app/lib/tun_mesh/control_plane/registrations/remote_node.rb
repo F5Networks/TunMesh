@@ -100,7 +100,7 @@ module TunMesh
         end
 
         def transmit_packet(packet:)
-          raise("No worker") unless _transmit_worker.alive?
+          raise('No worker') unless _transmit_worker.alive?
 
           @transmit_queue.push(packet)
         end
@@ -139,7 +139,7 @@ module TunMesh
 
         def _transmit_worker
           @transmit_worker ||= Thread.new do
-            @logger.debug("transmit_worker: Initialized")
+            @logger.debug('transmit_worker: Initialized')
             loop do
               break if @transmit_queue.closed?
 
@@ -165,7 +165,7 @@ module TunMesh
               end
             end
           ensure
-            @logger.debug("transmit_worker: Exiting")
+            @logger.debug('transmit_worker: Exiting')
             @transmit_queue.close
           end
         end

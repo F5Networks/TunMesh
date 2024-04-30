@@ -27,7 +27,7 @@ module TunMesh
       end
 
       def bootstrap!
-        @logger.info("Bootstrapping into cluster")
+        @logger.info('Bootstrapping into cluster')
         TunMesh::CONFIG.values.clustering.bootstrap_node_urls.each do |node_url|
           @registrations.bootstrap_node(remote_url: node_url)
         end

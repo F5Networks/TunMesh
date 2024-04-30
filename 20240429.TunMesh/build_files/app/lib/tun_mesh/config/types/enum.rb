@@ -15,7 +15,7 @@ module TunMesh
           lines = []
           lines.push("#{_description_block_required_mark} #{key} (#{self.class}): #{description_short}")
           lines += description_long.split("\n") if description_long
-          lines.push("One of:")
+          lines.push('One of:')
           @allowed_values_description.each_pair do |value, description|
             lines.push(" - #{value}:#{value == default ? ' (Default)' : ''} #{description}")
           end

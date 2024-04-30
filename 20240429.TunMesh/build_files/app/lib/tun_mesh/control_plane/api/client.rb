@@ -24,8 +24,8 @@ module TunMesh
         attr_reader :remote_url
 
         def initialize(api_auth:, remote_url:, remote_id: nil)
-          raise(ArgumentError, "Missing api_auth") if api_auth.nil?
-          raise(ArgumentError, "Missing remote_url") if remote_url.nil?
+          raise(ArgumentError, 'Missing api_auth') if api_auth.nil?
+          raise(ArgumentError, 'Missing remote_url') if remote_url.nil?
 
           @api_auth = api_auth
           @remote_id = remote_id
@@ -43,7 +43,7 @@ module TunMesh
           )
 
           @session_auth_lock = Mutex.new
-          @logger.debug("Initialized")
+          @logger.debug('Initialized')
         end
 
         def groom_auth
@@ -56,7 +56,7 @@ module TunMesh
                 _new_session_auth
               rescue StandardError => exc
                 @logger.error("Failed to rotate session auth: #{exc.class}: #{exc}")
-                @logger.error("Invalidating expired session")
+                @logger.error('Invalidating expired session')
                 @session_auth = nil
                 @session_auth_age = nil
 
@@ -78,15 +78,15 @@ module TunMesh
           rescue RequestException => exc
             case exc.code.to_s
             when '404'
-              @logger.warn("Re-registration returned 404: This node not known to the remote node")
+              @logger.warn('Re-registration returned 404: This node not known to the remote node')
             when '401'
-              @logger.warn("Re-registration returned 401: Remote rejected session auth")
+              @logger.warn('Re-registration returned 401: Remote rejected session auth')
             else
               raise exc
             end
           end
 
-          @logger.warn("Resetting session auth due to re-registration failure")
+          @logger.warn('Resetting session auth due to re-registration failure')
           @session_auth = nil
           return _register_bootstrap(payload: payload)
         end
@@ -105,7 +105,7 @@ module TunMesh
             resp = HTTParty.get(url.to_s, verify: false)
 
             raise(RequestException.new("HTTP #{resp.code}", resp.code)) if resp.code != 200
-            raise(RequestException.new("Invalid response", resp.code)) unless resp['id']
+            raise(RequestException.new('Invalid response', resp.code)) unless resp['id']
 
             @remote_id = resp['id']
 
@@ -212,7 +212,7 @@ module TunMesh
 
         def _new_session_auth
           @session_auth_lock.synchronize do
-            @logger.debug("Initializing new session auth")
+            @logger.debug('Initializing new session auth')
             new_secret = Auth::Token.random_secret
             new_token = Auth::Token.new(
               id: SecureRandom.uuid,
@@ -236,7 +236,7 @@ module TunMesh
             @session_auth = new_token
           end
 
-          @logger.debug("New sesson auth initialized successfully")
+          @logger.debug('New sesson auth initialized successfully')
           return @session_auth
         end
       end

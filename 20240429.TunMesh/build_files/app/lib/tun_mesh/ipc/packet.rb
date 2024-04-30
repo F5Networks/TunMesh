@@ -89,7 +89,7 @@ module TunMesh
       end
 
       def md5
-        md5_raw.bytes.map { |b| sprintf("%02x", b) }.join
+        md5_raw.bytes.map { |b| sprintf('%02x', b) }.join
       end
 
       def stamp

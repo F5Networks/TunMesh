@@ -1,10 +1,10 @@
-require_relative "clustering"
-require_relative "control_api"
-require_relative "monitoring"
-require_relative "networking"
-require_relative "process"
+require_relative 'clustering'
+require_relative 'control_api'
+require_relative 'monitoring'
+require_relative 'networking'
+require_relative 'process'
 require_relative 'types/uint'
-require_relative "version"
+require_relative 'version'
 
 module TunMesh
   class Config

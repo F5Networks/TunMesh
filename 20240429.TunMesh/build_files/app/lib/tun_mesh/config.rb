@@ -28,7 +28,7 @@ module TunMesh
       @config_path = Pathname.new(path) # Used in the file type for relative pathing
       yaml_parsed_contents = YAML.safe_load(File.read(path))
 
-      raise(Config::Errors::MissingKeyError.new("Missing top level tun_mesh key", 'tun_mesh')) unless yaml_parsed_contents.key?('tun_mesh')
+      raise(Config::Errors::MissingKeyError.new('Missing top level tun_mesh key', 'tun_mesh')) unless yaml_parsed_contents.key?('tun_mesh')
 
       # Pass self through at a root of tree so parsers can cross-reference
       @top_group.load_config_value(value: yaml_parsed_contents['tun_mesh'], config_obj: self)

@@ -127,7 +127,7 @@ module TunMesh
           return :ipv4 if ipv4?
           return :ipv6 if ipv6?
 
-          raise("Unknown proto")
+          raise('Unknown proto')
         end
       end
     end

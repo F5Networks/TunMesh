@@ -48,7 +48,7 @@ module TunMesh
         # Protection against misrouted discovery registrations
         # Could be due to a badly templated config block, or using a load balancer for discovery
         if registration.local.id == TunMesh::CONFIG.node_id
-          @logger.warn("Rejecting registration from self")
+          @logger.warn('Rejecting registration from self')
           raise RegistrationFromSelf
         end
 
@@ -94,7 +94,7 @@ module TunMesh
 
       def _groom
         if @remote_nodes.empty?
-          @logger.warn("No remote nodes registered")
+          @logger.warn('No remote nodes registered')
           return
         end
 

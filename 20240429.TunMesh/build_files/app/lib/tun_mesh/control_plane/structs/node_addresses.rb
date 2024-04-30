@@ -19,7 +19,7 @@ module TunMesh
 
       # Extra validation, this struct is overloaded to enable other protocols without sprawling the structs
       def _set_attr(name, raw_value)
-        raise("This is actually being called") # Test
+        raise('This is actually being called') # Test
         super(name, raw_value).validate_proto(name)
       end
     end

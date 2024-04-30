@@ -20,7 +20,7 @@ module TunMesh
             return true if string.downcase == 'true'
             return false if string.downcase == 'false'
 
-            raise(Errors::ValueError, "Not a boolean string value")
+            raise(Errors::ValueError, 'Not a boolean string value')
           else
             raise(Errors::TypeError, "Unknown type #{value.class}")
           end

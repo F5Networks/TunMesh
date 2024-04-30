@@ -14,7 +14,7 @@ module TunMesh
       end
 
       def add_field(field)
-        raise(RuntimeError, "Output value already read") if @value
+        raise(RuntimeError, 'Output value already read') if @value
         raise(ArgumentError, "Duplicate field #{field.key}") if field_keys.include?(field.key)
 
         @fields.push(field)
@@ -84,7 +84,7 @@ module TunMesh
         raise(Errors::MissingKeyError, "Missing keys #{missing_keys}") unless missing_keys.empty?
 
         value.transform_keys { |key| fields_by_key[key] }.each do |field, field_value|
-          raise(Errors::ValueError, "Null value") if field_value.nil? && !field.allow_nil
+          raise(Errors::ValueError, 'Null value') if field_value.nil? && !field.allow_nil
 
           begin
             field.load_config_value(value: field_value, config_obj: config_obj)

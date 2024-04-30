@@ -21,7 +21,7 @@ module TunMesh
 
         not_found do
           status 404
-          body "Not Found"
+          body 'Not Found'
         end
 
         def self.run!(**kwargs)
@@ -29,10 +29,10 @@ module TunMesh
 
           # https://puma.io/puma/
           puma_bind = [
-            "ssl://0.0.0.0:", TunMesh::CONFIG.values.control_api.listen_port,
-            "?key=", TunMesh::CONFIG.values.control_api.ssl.key_file_path,
-            "&cert=", TunMesh::CONFIG.values.control_api.ssl.cert_file_path,
-            "&no_tlsv1=true"
+            'ssl://0.0.0.0:', TunMesh::CONFIG.values.control_api.listen_port,
+            '?key=', TunMesh::CONFIG.values.control_api.ssl.key_file_path,
+            '&cert=', TunMesh::CONFIG.values.control_api.ssl.cert_file_path,
+            '&no_tlsv1=true'
           ]
           Sinatra::Base.set(:bind, puma_bind.join)
 

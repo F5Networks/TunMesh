@@ -20,7 +20,7 @@ module TunMesh
           loop do
             _process_traffic(tun: tun)
 
-            @logger.warn("process_traffic() exited")
+            @logger.warn('process_traffic() exited')
             sleep(TunMesh::CONFIG.values.process.timing.tun_handler.fault_delay)
           end
         end
@@ -67,7 +67,7 @@ module TunMesh
       end
 
       def _process_traffic(tun:)
-        @logger.debug("_process_traffic() Entering")
+        @logger.debug('_process_traffic() Entering')
         threads = []
 
         threads.push(Thread.new do
@@ -115,12 +115,12 @@ module TunMesh
           sleep(TunMesh::CONFIG.values.process.timing.tun_handler.heartbeat_interval)
         end
 
-        @logger.debug("process_traffic() Exiting")
+        @logger.debug('process_traffic() Exiting')
 
         threads.each(&:terminate)
         threads.each(&:join)
 
-        @logger.debug("process_traffic() Complete")
+        @logger.debug('process_traffic() Complete')
       end
     end
   end

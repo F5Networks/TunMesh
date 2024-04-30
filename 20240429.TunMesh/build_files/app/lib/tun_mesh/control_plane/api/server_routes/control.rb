@@ -62,10 +62,10 @@ module TunMesh
               end
             rescue TunMesh::ControlPlane::Registrations::RegistrationFromSelf
               status 421
-              body "Registration to self"
+              body 'Registration to self'
             rescue TunMesh::ControlPlane::Registrations::RegistrationFailed
               status 400
-              body "Failed"
+              body 'Failed'
             end
           end
 
@@ -91,10 +91,10 @@ module TunMesh
                 end
               rescue TunMesh::ControlPlane::Registrations::RegistrationFromSelf
                 status 421
-                body "Registration to self"
+                body 'Registration to self'
               rescue TunMesh::ControlPlane::Registrations::RegistrationFailed
                 status 400
-                body "Failed"
+                body 'Failed'
               end
             end
           end

@@ -4,7 +4,7 @@ require_relative 'errors'
 module TunMesh
   class Config
     class Version < Types::Base
-      VERSION = "1.0"
+      VERSION = '1.0'
 
       def initialize
         super(
@@ -19,7 +19,7 @@ module TunMesh
 
       def load_config_value(value:, **)
         @value = value.to_s
-        raise(Errors::ValueError, "Unknown config version") if @value != VERSION
+        raise(Errors::ValueError, 'Unknown config version') if @value != VERSION
       end
 
       def required

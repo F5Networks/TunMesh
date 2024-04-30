@@ -14,10 +14,10 @@ module TunMesh
         def example_value_lines
           lines = [
             "#{key}:",
-            "  - [Deployment Unique Value 1]",
-            "  - [Deployment Unique Value 2]",
-            "  ...",
-            "  - [Deployment Unique Value n]",
+            '  - [Deployment Unique Value 1]',
+            '  - [Deployment Unique Value 2]',
+            '  ...',
+            '  - [Deployment Unique Value n]',
           ]
 
           return lines if required
@@ -31,7 +31,7 @@ module TunMesh
             return
           end
 
-          raise(Errors::TypeError, "Not a list") unless value.is_a? Array
+          raise(Errors::TypeError, 'Not a list') unless value.is_a? Array
 
           @value = value.map do |item|
             @value_type.new(**@init_kwargs).tap { |item_obj| item_obj.load_config_value(value: item, **kwargs) }

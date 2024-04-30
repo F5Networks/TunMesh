@@ -79,9 +79,9 @@ module TunMesh
 
         def _description_block_required_mark
           if required
-            "[REQUIRED]"
+            '[REQUIRED]'
           else
-            "[Optional]"
+            '[Optional]'
           end
         end
       end
