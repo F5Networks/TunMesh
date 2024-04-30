@@ -89,6 +89,7 @@ module TunMesh
       end
 
       def md5
+        _calculate_raw_md5 if md5_raw.empty?
         md5_raw.bytes.map { |b| sprintf('%02x', b) }.join
       end
 

@@ -2,6 +2,7 @@ require 'digest'
 require 'jwt'
 require 'logger'
 require 'securerandom'
+require './lib/tun_mesh/ipc/packet'
 require './lib/tun_mesh/config'
 
 require_relative 'errors'
@@ -78,9 +79,17 @@ module TunMesh
 
           private
 
-          # TODO: Packet payloads already have a md5, that should be reused
           def _payload_sig(payload:)
-            Digest::SHA256.hexdigest(payload)
+            if payload.is_a? TunMesh::IPC::Packet
+              # Use the packet md5 as it's already calculated
+              # This is a application specific optimization
+              components = [1, payload.md5]
+            else
+              # Default to SHA256
+              components = [0, Digest::SHA256.hexdigest(payload)]
+            end
+
+            return components.join('/')
           end
         end
       end
