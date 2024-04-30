@@ -1,0 +1,53 @@
+AllCops:
+  TargetRubyVersion: 3.0
+  NewCops: enable
+  SuggestExtensions: false
+
+Layout/LineLength:
+  Max: 200
+
+# Disable metrics cops.  They're low-value and noisy
+# If a method isn't too long/complex to test then it is fine.
+Metrics:
+ Enabled: false
+
+# Requires single character variable names
+Naming/RescuedExceptionsVariableName:
+  Enabled: false
+
+# Do not enforce number separators
+Style/NumericLiterals:
+  Enabled: false
+
+# Favor explicit over implicit code: Don't error on arguments "implied by default"
+Style/RedundantArgument:
+  Enabled: false
+
+# Favor explicit over implicit code: don't complain of "redundant returns"
+Style/RedundantReturn:
+  Enabled: false
+
+# This encourages '@thing&.method' over '@thing.method if @thing' which is a bit too sugary, and could be easy to misread
+Style/SafeNavigation:
+  Enabled: false
+
+# Allow ending ranges.  [n..-1] is more explicit than [n..]
+Style/SlicingWithRange:
+  Enabled: false
+
+# Prefer common and unambiguous comparison operations to helper methods like .positive? and .zero?
+Style/NumericPredicate:
+  Enabled: false
+
+# $0 is understandable and does not require extra includes
+Style/SpecialGlobalVars:
+    Enabled: false
+
+# Favor redundant variable assignment within conditionals for readabilitiy
+Style/ConditionalAssignment:
+  Enabled: false
+
+# Ruby 3.0 upgrade cop
+# Do not add "magic" code
+Style/FrozenStringLiteralComment:
+    Enabled: false
