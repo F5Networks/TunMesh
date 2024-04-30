@@ -211,29 +211,51 @@ module TunMesh
         end
 
         def _new_session_auth
-          @session_auth_lock.synchronize do
-            @logger.debug('Initializing new session auth')
-            new_secret = Auth::Token.random_secret
-            new_token = Auth::Token.new(
-              id: SecureRandom.uuid,
-              secret: new_secret
-            )
+          @logger.debug('Initializing new session auth')
+          new_secret = Auth::Token.random_secret
+          new_token = Auth::Token.new(
+            id: SecureRandom.uuid,
+            secret: new_secret
+          )
 
-            post_payload = {
+          post_kwargs = {
+            payload: {
               id: new_token.id,
               secret: Base64.encode64(remote_pubkey.public_encrypt(new_secret))
-            }
+            },
+            valid_response_codes: [204]
+          }
 
-            _post_mutual(
-              # TODO: This should try session auth on renewal
-              auth: @api_auth.cluster_token,
-              path: '/tunmesh/auth/v0/init_session',
-              payload: post_payload,
-              valid_response_codes: [204]
-            )
+          if @session_auth
+            post_kwargs[:auth] = session_auth
+            post_kwargs[:path] = "/tunmesh/auth/v0/init_session/#{TunMesh::CONFIG.node_id}"
+          else
+            post_kwargs[:auth] = @api_auth.cluster_token
+            post_kwargs[:path] = '/tunmesh/auth/v0/init_session'
+          end
+
+          @session_auth_lock.synchronize do
+            _post_mutual(**post_kwargs)
 
             @session_auth_age = Time.now.to_i
             @session_auth = new_token
+          rescue RequestException => exc
+            raise exc if post_kwargs[:path] != "/tunmesh/auth/v0/init_session/#{TunMesh::CONFIG.node_id}"
+
+            case exc.code.to_s
+            when '404'
+              @logger.warn('Session regeneration returned 404: This node not known to the remote node')
+            when '401'
+              @logger.warn('Session regeneration returned 401: Remote rejected session auth')
+            else
+              raise exc
+            end
+
+            @logger.warn('Retrying session auth sync with cluster credentials')
+            post_kwargs[:auth] = @api_auth.cluster_token
+            post_kwargs[:path] = '/tunmesh/auth/v0/init_session'
+
+            retry
           end
 
           @logger.debug('New sesson auth initialized successfully')

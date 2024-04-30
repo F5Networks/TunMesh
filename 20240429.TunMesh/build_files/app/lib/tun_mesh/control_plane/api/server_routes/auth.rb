@@ -29,6 +29,23 @@ module TunMesh
             status resp_status
             body('Failed') unless resp_status == 204
           end
+
+          post '/tunmesh/auth/v0/init_session/:remote_node_id' do |remote_node_id|
+            return unless Helpers.ensure_json_content(context: self)
+
+            unless settings.api_auth.remote_node_session_auth(remote_node_id: remote_node_id)
+              status 404
+            else
+              body = request.body.read
+              remote_node_id = Helpers.ensure_rx_auth(auth: settings.api_auth.remote_node_session_auth(remote_node_id: remote_node_id),
+                                                      body: body,
+                                                      context: self)
+
+              resp_status = settings.api_auth.process_init_session_request(raw_request: body, remote_node_id: remote_node_id)
+              status resp_status
+              body('Failed') unless resp_status == 204
+            end
+          end
         end
       end
     end
