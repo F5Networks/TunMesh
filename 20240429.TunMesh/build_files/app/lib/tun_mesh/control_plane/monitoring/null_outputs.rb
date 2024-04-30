@@ -10,7 +10,7 @@ module TunMesh
         def increment_gauge(**)
           # No-op
         end
-        
+
         def set_gauge(**)
           # No-op
         end

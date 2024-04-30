@@ -22,7 +22,7 @@ module TunMesh
               )
             )
           end
-          
+
           add_field(
             Types::NetAddress.new(
               key: 'network_cidr',
@@ -55,4 +55,4 @@ EOF
     end
   end
 end
-          
+

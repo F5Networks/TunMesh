@@ -13,7 +13,7 @@ module TunMesh
       # NetAddr::CIDR appears to have been removed in V2
       class NetAddress < Base
         attr_reader :address
-        
+
         FIELDS = {
           cidr: {
             type: String
@@ -32,7 +32,7 @@ module TunMesh
         def include?(other)
           _network_address_obj.include?(other)
         end
-          
+
         def ipv4?
           _network_address_obj.ipv4?
         end
@@ -84,13 +84,13 @@ module TunMesh
         def to_i
           _address_obj.to_i
         end
-        
+
         def validate_proto(required_proto)
           return true if proto == required_proto.to_sym
 
           raise("Address #{address} did not validate as #{proto}")
         end
-        
+
         private
 
         def _address_obj
@@ -111,11 +111,11 @@ module TunMesh
         def _multicast_network_obj
           @multicast_network_obj ||= IPAddr.new(_multicast_network_cidr)
         end
-        
+
         def _network_address_obj
           @network_address_obj ||= IPAddr.new(@cidr)
         end
-        
+
         def _parse_cidr
           split_str = @cidr.split('/')
           raise(ArgumentError, "#{cidr} is not a valid CIDR") unless split_str.length == 2

@@ -22,7 +22,7 @@ module TunMesh
             }
           )
         )
-          
+
         add_field(Monitoring::Prometheus.new)
       end
     end

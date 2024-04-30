@@ -9,7 +9,7 @@ module TunMesh
           super(**kwargs)
           @proto = proto
         end
-        
+
         def load_config_value(value:, **)
           @value = TunMesh::ControlPlane::Structs::NetAddress.parse_cidr(value)
           @value.validate_proto(@proto)

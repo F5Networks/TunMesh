@@ -7,7 +7,7 @@ module TunMesh
       module ServerRoutes
         module Health
           extend Sinatra::Extension
-          
+
           # Args are passed in via Sinatra .set in TunMesh::ControlPlane::API::Server.run!
           # This const defines the args this route needs.
           REQUIRED_ARGS = %i[manager].freeze

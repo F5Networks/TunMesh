@@ -35,22 +35,22 @@ module TunMesh
           tun: tun_healthy?
         }
       end
-      
+
       def healthy?
         health_snapshot = health
         return true if health_snapshot.values.all?
 
         @logger.error("Unhealthy: #{health_snapshot}")
         return false
-      end        
+      end
 
       def tun_healthy?
         if @last_tun_heartbeat == 0
           @logger.error("Tunnel process unhealthy: No heartbeat")
           return false
         end
-        
-        last_heartbeat = (Time.now.to_i - @last_tun_heartbeat) 
+
+        last_heartbeat = (Time.now.to_i - @last_tun_heartbeat)
         return true if (last_heartbeat < 2.0)
 
         @logger.error("Tunnel process unhealthy: Last heartbeat #{last_heartbeat}s ago")
@@ -61,12 +61,12 @@ module TunMesh
 
       def _decode_packet(packet:, source:)
         raise(ArgumentError, "Expected TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
-        
+
         @logger.debug do
           ethertype_name = TunMesh::VPN::Ethertypes.ethertype_name(ethertype: packet.ethertype)
           "#{packet.id}: Recieved a #{packet.data_length} byte #{ethertype_name} packet with signature #{packet.md5} from #{source}"
         end
-        
+
         net_packet_class = TunMesh::VPN::Ethertypes.l3_packet_by_ethertype(ethertype: packet.ethertype)
         if net_packet_class.nil?
           @logger.debug do
@@ -79,7 +79,7 @@ module TunMesh
 
         net_packet = net_packet_class.decode(packet.data)
         @logger.debug { "#{packet.id}: #{net_packet_class::PROTO}: #{net_packet.source_str} -> #{net_packet.dest_str}" }
-        
+
         unless TunMesh::CONFIG.values.networking.to_h.key?(net_packet_class::PROTO)
           @logger.debug("Dropping packet #{packet.id} from #{net_packet.source_str} (Self) -> #{net_packet.dest_str}: #{net_packet_class::PROTO} Not supported")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :unsupported})
@@ -102,7 +102,7 @@ module TunMesh
           end
         end
       end
-          
+
       def _read_pipe_thread
         @read_pipe_thread ||= Thread.new do
           loop do
@@ -116,7 +116,7 @@ module TunMesh
           end
         end
       end
-      
+
       def _route_local_packet(decoded_packet:, packet:)
         if decoded_packet.net_packet.dest_str == decoded_packet.net_config.node_address_cidr.address
           @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str} (Self): received local")
@@ -142,7 +142,7 @@ module TunMesh
             end.each do |remote_node|
               _tx_packet(decoded_packet: decoded_packet, packet: packet, remote_node: remote_node)
             end
-            
+
             return
           else
             @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str}: Local Broadcast (Disabled)")
@@ -161,7 +161,7 @@ module TunMesh
             @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str}: Outside configured network")
             @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :outside_configured_network})
           end
-          
+
           return
         end
 
@@ -206,7 +206,7 @@ module TunMesh
 
         if decoded_packet.net_config.node_address_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
           if decoded_packet.net_config.enable_broadcast
-            @logger.debug("Packet #{packet.id}: Broadcast packet to the local subnet") 
+            @logger.debug("Packet #{packet.id}: Broadcast packet to the local subnet")
             _rx_remote_packet_to_tun(decoded_packet: decoded_packet, packet: packet, source: source, source_node_obj: source_node_obj)
             return
           else
@@ -215,7 +215,7 @@ module TunMesh
             return
           end
         end
-        
+
         if decoded_packet.net_config.network_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
           if decoded_packet.net_config.enable_broadcast
             @logger.debug("Packet #{packet.id}: Broadcast packet to the routed subnet")
@@ -227,7 +227,7 @@ module TunMesh
             return
           end
         end
-        
+
         @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Misrouted")
         @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :misrouted})
         return

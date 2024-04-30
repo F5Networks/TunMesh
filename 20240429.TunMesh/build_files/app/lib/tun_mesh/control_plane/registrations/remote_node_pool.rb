@@ -20,7 +20,7 @@ module TunMesh
         def empty?
           @nodes.empty?
         end
-        
+
         def groom!
           @node_lookup_lock.synchronize do
             @nodes.delete_if do |node_id, node|
@@ -73,7 +73,7 @@ module TunMesh
 
         def register(registration:, api_client: nil)
           id = registration.local.id
-          
+
           if @nodes.key?(id)
             @nodes[id].update_registration(registration)
           else
@@ -125,7 +125,7 @@ module TunMesh
           return node
         end
 
-        
+
         def _sync_node_addresses(updated_node:)
           @node_ids_by_address_lock.synchronize do
             updated_node.node_addresses.to_h.each_pair do |proto, address|
@@ -136,11 +136,11 @@ module TunMesh
               else
                 @logger.info("Storing node #{updated_node.id} for #{proto} #{address}")
               end
-              
+
               @node_ids_by_address[proto][address] = updated_node.id
             end
           end
-        end       
+        end
       end
     end
   end

@@ -14,7 +14,7 @@ module TunMesh
       class Client
         class RequestException < RuntimeError
           attr_reader :code
-        
+
           def initialize(message, code)
             @code = code
             super(message)
@@ -22,11 +22,11 @@ module TunMesh
         end
 
         attr_reader :remote_url
-        
+
         def initialize(api_auth:, remote_url:, remote_id: nil)
-          raise(ArgumentError, "Missing api_auth") if api_auth.nil? 
+          raise(ArgumentError, "Missing api_auth") if api_auth.nil?
           raise(ArgumentError, "Missing remote_url") if remote_url.nil?
-         
+
           @api_auth = api_auth
           @remote_id = remote_id
           @remote_url = remote_url.to_s
@@ -113,7 +113,7 @@ module TunMesh
             raise(exc, "Failed to perform ID GET to #{url}: #{exc}")
           end
         end
-        
+
         def session_auth
           @session_auth ||= _new_session_auth
         end
@@ -143,7 +143,7 @@ module TunMesh
 
           raise(RequestException.new("HTTP GET to #{path} returned unexpected content/code #{resp.content_type} / #{resp.code}", resp.code)) unless resp.code == '200'
           raise(RequestException.new("HTTP GET to #{path} returned content type #{resp.content_type}", resp.code)) unless resp.content_type == expected_content_type
-          
+
           body = resp.body
         end
 
@@ -232,7 +232,7 @@ module TunMesh
             @session_auth_age = Time.now.to_i
             @session_auth = new_token
           end
-          
+
           @logger.debug("New sesson auth initialized successfully")
           return @session_auth
         end

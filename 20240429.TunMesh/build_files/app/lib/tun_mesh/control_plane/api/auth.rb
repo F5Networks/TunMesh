@@ -35,7 +35,7 @@ module TunMesh
             @logger.warn("Invalid session auth update request from #{remote_node_id}: #{exc.class}: #{exc}")
             return 400
           end
-            
+
           remote_api_client.session_auth = Token.new(id: auth_id, secret: new_secret)
 
           @logger.info("Successfully updated session auth for #{remote_node_id} to #{auth_id}")
@@ -51,7 +51,7 @@ module TunMesh
         def rsa_decrypt(cyphertext:)
           return @rsa_private.decrypt(cyphertext)
         end
-        
+
         def rsa_public
           @rsa_private.public_key
         end

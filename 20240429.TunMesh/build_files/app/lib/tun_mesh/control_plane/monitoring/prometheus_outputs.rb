@@ -36,7 +36,7 @@ module TunMesh
               labels: _complete_labels(labels: labels)
             )
         end
-        
+
         def set_gauge(id:, value:, labels: {})
           raise(ArgumentError, "Unknown monitor ID #{id}") unless @outputs.key?(id)
 

@@ -7,7 +7,7 @@ module TunMesh
       class List < MultiBase
         def initialize(**kwargs)
           @value = []
-          
+
           super
         end
 
@@ -29,7 +29,7 @@ module TunMesh
             @value = []
             return
           end
-          
+
           raise(Errors::TypeError, "Not a list") unless value.is_a? Array
 
           @value = value.map do |item|

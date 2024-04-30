@@ -9,7 +9,7 @@ module TunMesh
     class Registrations
       class RemoteNode
         attr_reader :api_client, :id, :registration
-        
+
         def initialize(manager:, registration:, api_client: nil)
           @manager = manager
           @api_client = api_client
@@ -23,7 +23,7 @@ module TunMesh
         def api_client
           @api_client ||= @manager.api.new_client(remote_id: registration.local.id, remote_url: registration.local.listen_url)
         end
-        
+
         def close
           unless @transmit_queue.closed?
             @transmit_queue.close
@@ -74,7 +74,7 @@ module TunMesh
         def node_addresses
           _node_addresses(tgt_registration: registration)
         end
-        
+
         def registration_required?
           (Time.now.to_i - stamp) > TunMesh::CONFIG.values.process.timing.registrations[_timing_config_key].reregistration_interval
         end
@@ -82,11 +82,11 @@ module TunMesh
         def remotes
           registration.remote
         end
-        
+
         def stale?
           (Time.now.to_i - stamp) > TunMesh::CONFIG.values.process.timing.registrations[_timing_config_key].stale_threshold
         end
-        
+
         def stamp
           registration.stamp
         end
@@ -121,7 +121,7 @@ module TunMesh
         def _node_addresses(tgt_registration:)
           tgt_registration.local.node_addresses.to_h.transform_values(&:address)
         end
-        
+
         def _timing_config_key
           return @timing_config if @timing_config
 
@@ -133,7 +133,7 @@ module TunMesh
 
           return @timing_config
         end
-        
+
         def _transmit_worker
           @transmit_worker ||= Thread.new do
             @logger.debug("transmit_worker: Initialized")
@@ -152,7 +152,7 @@ module TunMesh
                   @manager.monitors.increment_gauge(id: :dropped_packets, labels: {reason: :expired})
                   next
                 end
-                
+
                 api_client.transmit_packet(packet: packet)
                 @logger.debug("Successfully transmitted #{packet.id}")
               rescue StandardError => exc
@@ -170,5 +170,5 @@ module TunMesh
     end
   end
 end
-          
-          
+
+

@@ -11,11 +11,11 @@ module TunMesh
           id: {
             type: String
           },
-          
+
           listen_url: {
             type: String
           },
-          
+
           network_addresses: {
             type: NodeAddresses
           },
@@ -24,7 +24,7 @@ module TunMesh
             type: NodeAddresses
           }
         }
-        
+
         def self.local
           return @local ||= new(
             id: TunMesh::CONFIG.node_id,
@@ -33,7 +33,7 @@ module TunMesh
               **NodeAddresses::FIELDS.keys.to_h do |proto|
                 [proto, TunMesh::CONFIG.values.networking[proto].network_cidr]
               end),
-            
+
             node_addresses: NodeAddresses.new(
               **NodeAddresses::FIELDS.keys.to_h do |proto|
                 [proto, TunMesh::CONFIG.values.networking[proto].node_address_cidr]
@@ -45,4 +45,4 @@ module TunMesh
   end
 end
 
-    
+

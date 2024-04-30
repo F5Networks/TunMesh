@@ -19,7 +19,7 @@ module TunMesh
           stamp: {
             type: Integer
           }
-        } 
+        }
       end
     end
   end

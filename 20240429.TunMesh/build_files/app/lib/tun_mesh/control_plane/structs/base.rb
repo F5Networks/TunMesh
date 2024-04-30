@@ -35,7 +35,7 @@ module TunMesh
         def to_h
           self.class::FIELDS.keys.map { |name| [name, send(name)] }.to_h
         end
-        
+
         def to_json(*args, **kwargs)
           to_h.to_json(*args, **kwargs)
         end
@@ -48,7 +48,7 @@ module TunMesh
           # Nested Parsing
           return expected_type.new(**value.transform_keys(&:to_sym)) if value.is_a?(Hash)
           return value.to_sym if value.is_a?(String) && expected_type == Symbol
-          
+
           raise(ArgumentError, "must be instance of #{expected_type}, got #{value.class}") unless value.is_a? Hash
         end
 
@@ -89,7 +89,7 @@ module TunMesh
 
               [parsed_key, parsed_value]
             end.to_h
-          end          
+          end
 
           instance_variable_set("@#{name}", value)
           return value

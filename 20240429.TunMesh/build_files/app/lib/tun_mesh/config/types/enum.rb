@@ -25,7 +25,7 @@ module TunMesh
 
         def load_config_value(value:, **)
           @value = value.to_s
-          
+
           raise(Errors::ValueError, "Must be one of #{@allowed_values_flat}") unless @allowed_values_flat.include?(@value)
         end
       end

@@ -8,7 +8,7 @@ module TunMesh
       module ServerRoutes
         module Auth
           extend Sinatra::Extension
-          
+
           # Args are passed in via Sinatra .set in TunMesh::ControlPlane::API::Server.run!
           # This const defines the args this route needs.
           REQUIRED_ARGS = %i[api_auth].freeze
@@ -21,10 +21,10 @@ module TunMesh
 
           post '/tunmesh/auth/v0/init_session' do
             return unless Helpers.ensure_json_content(context: self)
-            
+
             body = request.body.read
             remote_node_id = Helpers.ensure_rx_auth(auth: settings.api_auth.cluster_token, body: body, context: self)
-            
+
             resp_status = settings.api_auth.process_init_session_request(raw_request: body, remote_node_id: remote_node_id)
             status resp_status
             body('Failed') unless resp_status == 204

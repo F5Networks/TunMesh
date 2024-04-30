@@ -8,11 +8,11 @@ module TunMesh
       module ServerRoutes
         module Control
           extend Sinatra::Extension
-          
+
           # Args are passed in via Sinatra .set in TunMesh::ControlPlane::API::Server.run!
           # This const defines the args this route needs.
           REQUIRED_ARGS = %i[api_auth manager].freeze
-          
+
           get '/tunmesh/control/v0/node_info/id' do
             # No inbound auth, as this endpoint is intended for use when the other end doesn't know
             #   our ID (Bootstrapping by URL only) and as such can't set the aud claim.
@@ -21,7 +21,7 @@ module TunMesh
             # No return auth, as that could be used to crack the cluster shared secret, which is the weakest and not auto-rotated.
             json({id: TunMesh::CONFIG.node_id})
           end
-          
+
           post '/tunmesh/control/v0/packet/rx/:remote_node_id' do |remote_node_id|
             return unless Helpers.ensure_json_content(context: self)
 
@@ -39,7 +39,7 @@ module TunMesh
               status 204
             end
           end
-          
+
           get '/tunmesh/control/v0/registrations' do
             json settings.manager.registrations
           end
@@ -64,7 +64,7 @@ module TunMesh
               body "Registration to self"
             rescue TunMesh::ControlPlane::Registrations::RegistrationFailed
               status 400
-              body "Failed"              
+              body "Failed"
             end
           end
 
@@ -88,13 +88,13 @@ module TunMesh
                   # Respond with our own info, to allow for a two way sync
                   settings.manager.registrations.outbound_registration_payload
                 end
-              
+
               rescue TunMesh::ControlPlane::Registrations::RegistrationFromSelf
                 status 421
                 body "Registration to self"
               rescue TunMesh::ControlPlane::Registrations::RegistrationFailed
                 status 400
-                body "Failed"              
+                body "Failed"
               end
             end
           end

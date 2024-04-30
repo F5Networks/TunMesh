@@ -10,7 +10,7 @@ module TunMesh
 
           super
         end
-        
+
         def load_config_value(value:, **)
           @value = value.to_s
 

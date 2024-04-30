@@ -7,7 +7,7 @@ module TunMesh
       # This class is intended as a base class for types that store multiple primitive types, like arrays and hashes
       class MultiBase < Base
         attr_reader :allow_empty
-        
+
         def initialize(**kwargs)
           @init_kwargs = kwargs
           @value_type = kwargs.fetch(:value_type)
@@ -21,8 +21,8 @@ module TunMesh
 
         def default_description
           nil
-        end        
-        
+        end
+
         def required
           @init_kwargs.fetch(:required, true)
         end

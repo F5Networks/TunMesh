@@ -10,7 +10,7 @@ module TunMesh
       def initialize(manager:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
         @manager = manager
-        
+
         @remote_nodes = RemoteNodePool.new(manager: @manager)
 
         worker
@@ -33,7 +33,7 @@ module TunMesh
       def healthy?
         health.values.all?
       end
-      
+
       def outbound_registration_payload
         Structs::Registration.new(
           local: TunMesh::ControlPlane::Structs::NodeInfo.local,
@@ -41,7 +41,7 @@ module TunMesh
           stamp: Time.now.to_i
         )
       end
-      
+
       def process_registration(raw_payload:, remote_node_id:, api_client: nil)
         registration = Structs::Registration.from_json(raw_payload)
 
@@ -89,9 +89,9 @@ module TunMesh
           end
         end
       end
-      
+
       private
-      
+
       def _groom
         if @remote_nodes.empty?
           @logger.warn("No remote nodes registered")

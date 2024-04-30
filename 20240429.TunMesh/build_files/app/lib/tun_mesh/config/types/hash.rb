@@ -7,7 +7,7 @@ module TunMesh
       class Hash < MultiBase
         def initialize(**kwargs)
           @value = {}
-          
+
           super
         end
 
@@ -23,13 +23,13 @@ module TunMesh
           return lines if required
           return lines.map { |l| "# #{l}"}
         end
-        
+
         def load_config_value(value:, **kwargs)
           if value.nil? && @allow_nil
             @value = []
             return
           end
-          
+
           raise(Errors::TypeError, "Not a hash") unless value.is_a? ::Hash
 
           @value = value.transform_values do |item|

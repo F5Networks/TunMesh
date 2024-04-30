@@ -41,7 +41,7 @@ module TunMesh
           _init_queues
         rescue StandardError => exc
           logger.info("Failed to init with queue_key #{@queue_key.to_s(16)}: Attempt #{retries}: #{exc.class}: #{exc}") if @control
-          
+
           raise exc unless @control
           raise exc if retries > TunMesh::CONFIG.values.process.ipc.group.max_init_attempts
 
@@ -57,13 +57,13 @@ module TunMesh
       end
 
       private
-      
+
       def _init_queues
         # Storing the queues in a hash because ... it's easy.
         @queues = QUEUE_SUB_IDS.transform_values do |sub_id|
           Queue.new(queue_id: (queue_key | sub_id), buffer_size: 2048, create: @control)
         end
-      end        
+      end
     end
   end
 end

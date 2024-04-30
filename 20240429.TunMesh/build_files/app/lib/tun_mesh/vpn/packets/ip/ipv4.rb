@@ -29,10 +29,10 @@ module TunMesh
           uint32 :dest_address
           string :options, read_length: :options_length_in_bytes
           string :data, read_length: :data_length_in_bytes
-           
+
           virtual :version_test, assert: -> { version == 4 }
           virtual :options_length_test, assert: -> { (options.length % 4) == 0 }
-          
+
           def self.decode(payload)
             self.read(payload)
           end
@@ -73,4 +73,4 @@ module TunMesh
     end
   end
 end
-  
+

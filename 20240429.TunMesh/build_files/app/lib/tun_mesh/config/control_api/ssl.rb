@@ -21,7 +21,7 @@ EOF
                  description_short: 'Path to the SSL cert file/bundle inside the container'
                )
              )
-        
+
              add_field(
                Types::File.new(
                  key: 'key_file_path',

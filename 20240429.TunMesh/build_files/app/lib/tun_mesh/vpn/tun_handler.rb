@@ -13,13 +13,13 @@ module TunMesh
         @logger = Logger.new(STDERR, progname: self.class.to_s)
         @queue_manager = TunMesh::IPC::QueueManager.new(queue_key: queue_key)
       end
-      
+
       def run!
         _open_tunnel do |tun|
           Process::UID.change_privilege(TunMesh::CONFIG.values.process.uid)
           loop do
             _process_traffic(tun: tun)
-            
+
             @logger.warn("process_traffic() exited")
             sleep(TunMesh::CONFIG.values.process.timing.tun_handler.fault_delay)
           end
@@ -27,7 +27,7 @@ module TunMesh
       end
 
       private
-      
+
       def _open_tunnel
         begin
           @logger.debug("Opening #{TunMesh::CONFIG.values.networking.tun_device_id}")
@@ -118,7 +118,7 @@ module TunMesh
 
         threads.each(&:terminate)
         threads.each(&:join)
-        
+
         @logger.debug("process_traffic() Complete")
       end
     end

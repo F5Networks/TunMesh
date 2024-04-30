@@ -40,7 +40,7 @@ module TunMesh
         # Order settings before groups, this makes the config more readable
         setting_fields = fields.reject { |field| field.is_a? Group }.sort_by { |f| f.key }
         group_fields = fields.select { |field| field.is_a? Group }.sort_by { |f| f.key }
-        
+
         setting_fields.each.with_index do |field, index|
           lines.push('') if index > 0
           lines += field.example_config_lines.map { |l| "  #{l}" }
@@ -62,7 +62,7 @@ module TunMesh
           lines.push('') if index > 0
           lines += field.example_config_lines.map { |l| "  #{l}" }
         end
-        
+
         return lines
       end
 
@@ -79,13 +79,13 @@ module TunMesh
 
         unknown_keys = (value.keys - field_keys)
         raise(Errors::UnknownKeyError, "Unknown keys #{unknown_keys}, expected keys #{field_keys}") unless unknown_keys.empty?
-        
+
         missing_keys = (fields.select(&:required).map(&:key) - value.keys)
         raise(Errors::MissingKeyError, "Missing keys #{missing_keys}") unless missing_keys.empty?
-        
+
         value.transform_keys { |key| fields_by_key[key] }.each do |field, field_value|
           raise(Errors::ValueError, "Null value") if field_value.nil? && !field.allow_nil
-          
+
           begin
             field.load_config_value(value: field_value, config_obj: config_obj)
           rescue Errors::ParseError => exc
@@ -93,7 +93,7 @@ module TunMesh
           rescue StandardError => exc
             raise(Errors::ParseError.new("#{exc.class}: #{exc}"))
           end
-          
+
         rescue Errors::ParseError => exc
           exc.prefix_key(key: field.key)
           raise exc if field.is_a?(Group)

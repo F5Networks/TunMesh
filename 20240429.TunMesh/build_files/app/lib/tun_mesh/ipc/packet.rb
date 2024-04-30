@@ -19,7 +19,7 @@ module TunMesh
       end
 
       VERSION = 0x02
-      
+
       endian :big
 
       uint8  :version, value: -> { VERSION }
@@ -40,11 +40,11 @@ module TunMesh
       rescue StandardError => exc
         raise(PayloadError, exc.to_s)
       end
-      
+
       def self.from_json(raw)
         payload = JSON.load(raw)
         raise(PayloadError.new("Version mismatch.  Expected #{VERSION}, got got #{payload['version']}")) unless VERSION == payload.fetch('version')
-        
+
         rv = new
         rv.ethertype = payload.fetch('ethertype')
         rv.b64_data = payload.fetch('b64_data')
@@ -71,7 +71,7 @@ module TunMesh
       def b64_data=(d64)
         self.data = Base64.decode64(d64)
       end
-      
+
       def encode
         self.to_binary_s
       end
@@ -80,7 +80,7 @@ module TunMesh
         # Only set in from_tun(), no current use in receiver so not in main packet
         @flags
       end
-      
+
       # For logging/debugging
       def id
         rv = "#{self.class}(#{stamp}-#{sprintf('0x%04x', ethertype)}-#{md5})"

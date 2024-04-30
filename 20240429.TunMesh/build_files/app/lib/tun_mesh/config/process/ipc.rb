@@ -15,7 +15,7 @@ IPC is via SysV APIs.
 IPC is internal to the app, so no special container level IPC settings are required.
 EOF
           )
-          
+
           add_field(Process::IPC::IPCGroup.new)
         end
       end

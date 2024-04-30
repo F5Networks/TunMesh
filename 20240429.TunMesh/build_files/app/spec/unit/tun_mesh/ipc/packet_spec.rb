@@ -27,7 +27,7 @@ describe TunMesh::IPC::Packet do
       describe attr_name.to_s do
         let(:test_attr_name) { attr_name }
         let(:new_data) { Array.new(rand(2..5)) { SecureRandom.hex }.join }
-        
+
         let(:test_value) do
           case attr_name
           when :b64_data
@@ -106,12 +106,12 @@ describe TunMesh::IPC::Packet do
           end
 
           let(:deserialized_output) { described_class.decode(bad_serialized_value) }
-          
+
           it_behaves_like 'deserialize failure'
         end
       end
     end
-    
+
     describe 'json' do
       let(:initial_deserialzed_input) { JSON.parse(subject.to_json) }
       let(:test_overrides) { {} }

@@ -54,11 +54,11 @@ module TunMesh
           initial_value: 0
         )
       end
-      
+
       def increment_gauge(**kwargs)
         @outputs.increment_gauge(**kwargs)
       end
-        
+
       def set_gauge(**kwargs)
         @outputs.set_gauge(**kwargs)
       end

@@ -3,7 +3,7 @@ module TunMesh
     module Errors
       class ParseError < StandardError
         attr_reader :key, :value
-        
+
         def initialize(message, key: nil, value: nil)
           @key = key
           @value = value

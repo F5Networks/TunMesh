@@ -18,12 +18,12 @@ module TunMesh
         ROUTES.each { |route| register route }
 
         use(Prometheus::Middleware::Exporter) if TunMesh::CONFIG.values.monitoring.method == 'prometheus'
-        
+
         not_found do
           status 404
           body "Not Found"
         end
-        
+
         def self.run!(**kwargs)
           ROUTES.each { |route| _set_route_args(kwargs: kwargs, route: route) }
 
@@ -52,5 +52,5 @@ module TunMesh
   end
 end
 
-          
-        
+
+

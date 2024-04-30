@@ -6,7 +6,7 @@ module TunMesh
   module ControlPlane
     class API
       attr_reader :auth
-      
+
       def initialize(manager:)
         @auth = Auth.new(api: self)
         @manager = manager

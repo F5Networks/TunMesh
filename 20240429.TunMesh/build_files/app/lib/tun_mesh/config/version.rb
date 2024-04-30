@@ -1,11 +1,11 @@
 require_relative 'types/base'
 require_relative 'errors'
- 
+
 module TunMesh
   class Config
     class Version < Types::Base
       VERSION = "1.0"
-      
+
       def initialize
         super(
           key: 'config_version',

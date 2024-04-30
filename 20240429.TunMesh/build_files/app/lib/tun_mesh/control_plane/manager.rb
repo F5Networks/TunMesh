@@ -13,7 +13,7 @@ module TunMesh
   module ControlPlane
     class Manager
       attr_reader :api_auth, :monitors, :registrations, :router
-      
+
       def initialize(queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
 
@@ -25,22 +25,22 @@ module TunMesh
       def api
         @api ||= API.new(manager: self)
       end
-      
+
       def bootstrap!
         @logger.info("Bootstrapping into cluster")
         TunMesh::CONFIG.values.clustering.bootstrap_node_urls.each do |node_url|
           @registrations.bootstrap_node(remote_url: node_url)
         end
       end
-      
+
       def health
         _health_sub_targets.transform_values(&:health)
       end
-      
+
       def healthy?
         return _health_sub_targets.transform_values(&:healthy?).values.all?
       end
-      
+
       def receive_packet(**kwargs)
         monitors.increment_gauge(id: :remote_rx_packets)
         @router.rx_remote_packet(**kwargs)

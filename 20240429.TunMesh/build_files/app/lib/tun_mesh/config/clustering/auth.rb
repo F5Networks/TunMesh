@@ -10,7 +10,7 @@ module TunMesh
             key: 'auth',
             description_short: 'Cluster auth'
           )
-          
+
           add_field(
             Types::String.new(
               key: 'secret',

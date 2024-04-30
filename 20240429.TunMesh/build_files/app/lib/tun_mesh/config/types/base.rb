@@ -3,7 +3,7 @@ module TunMesh
     module Types
       class Base
         attr_reader :allow_nil, :default, :description_short, :description_long, :key
-        
+
         def initialize(description_short:, key:, allow_nil: false, default: nil, description_long: nil, **)
           @allow_nil = allow_nil
           @default = default
@@ -38,14 +38,14 @@ module TunMesh
         def description_type
           self.class.to_s.split('::')[-1].downcase
         end
-        
+
         def example_config_lines
           lines = description_block_lines.map { |l| "# #{l}" }
           lines += example_value_lines
 
           return lines
         end
-        
+
         def example_value_lines
           return ["#{key}: [Deployment Unique Value]"] if required
           return ["# #{key}: #{default}"]
@@ -66,14 +66,14 @@ module TunMesh
         def to_s
           @value.to_s
         end
-        
+
         def value
           return @value if @value
           return default
         end
-        
+
         private
-        
+
         def _description_block_required_mark
           if required
             "[REQUIRED]"

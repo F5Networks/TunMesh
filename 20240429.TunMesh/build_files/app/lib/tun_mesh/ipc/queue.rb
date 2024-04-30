@@ -6,7 +6,7 @@ module TunMesh
       def initialize(queue_id:, buffer_size: 2048, create: false, mode: 0o0660)
         flags = mode
         flags |= (SysVMQ::IPC_CREAT | SysVMQ::IPC_EXCL) if create == true
-        
+
         # Arg 0: Queue ID: msgget(2) arg 0
         # Arg 1: Internal buffer size: Ruby sysvmq extension
         # Arg 2: flags: msgget(2) arg 1
@@ -23,7 +23,7 @@ module TunMesh
           mq&.destroy
         end
       end
-      
+
       def close
         @mq.destroy
         @mq = nil
@@ -37,11 +37,11 @@ module TunMesh
           return @mq.receive(0)
         end
       end
-      
+
       def push(payload)
         @mq.send(payload)
       end
     end
   end
 end
-      
+
