@@ -147,7 +147,7 @@ module TunMesh
           raise(RequestException.new("HTTP GET to #{path} returned unexpected content/code #{resp.content_type} / #{resp.code}", resp.code)) unless resp.code == '200'
           raise(RequestException.new("HTTP GET to #{path} returned content type #{resp.content_type}", resp.code)) unless resp.content_type == expected_content_type
 
-          body = resp.body
+          resp.body
         end
 
         def _post_mutual(auth:, path:, payload:, valid_response_codes:)

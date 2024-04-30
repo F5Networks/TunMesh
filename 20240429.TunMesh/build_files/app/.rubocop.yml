@@ -11,6 +11,10 @@ Layout/LineLength:
 Metrics:
  Enabled: false
 
+# Subjective
+Naming/HeredocDelimiterNaming:
+  Enabled: false
+
 # Requires single character variable names
 Naming/RescuedExceptionsVariableName:
   Enabled: false

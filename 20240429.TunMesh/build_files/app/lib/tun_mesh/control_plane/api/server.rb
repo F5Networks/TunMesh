@@ -13,9 +13,9 @@ module TunMesh
           ServerRoutes::Auth,
           ServerRoutes::Control,
           ServerRoutes::Health
-        ]
+        ].freeze
 
-        ROUTES.each { |route| register route }
+        ROUTES.each { |route| register route }.freeze
 
         use(Prometheus::Middleware::Exporter) if TunMesh::CONFIG.values.monitoring.method == 'prometheus'
 
