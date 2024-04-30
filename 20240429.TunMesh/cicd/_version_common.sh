@@ -28,7 +28,9 @@ SEMVER_VERSION_MINOR=$(echo "$BASE_VERSION" | awk '{print $1}' | cut -f 2 -d .)
 VERSION_LAST_SHA=$(echo "$BASE_VERSION" | awk '{print $2}')
 
 # Patch is the count of commits since the last Version file line sha
-SEMVER_VERSION_PATCH=$(git log --pretty=format:"%H" "${VERSION_LAST_SHA}".. "${SOURCE_DIR}" | sed -e 's|$|\n|g' | wc -l)
+# Grep is because git omits the trailing newline when outputting to a pipe, making it imposible to tell 0 commits from 1 with wc alone.
+# The grep ensures each line has a newline.
+SEMVER_VERSION_PATCH=$(git log --pretty=format:"%H" "${VERSION_LAST_SHA}".. "${SOURCE_DIR}" | grep . | wc -l)
 SEMVER_VERSION_BUILD=$(date "+%s")
 
 # Bare semver: Major/minor/patch only, no build/prerelease info
