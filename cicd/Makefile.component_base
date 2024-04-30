@@ -1,0 +1,44 @@
+#
+# Makefile.component_base: Make targets and variables common to all components
+#
+
+COMPONENT_BASE_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+include $(COMPONENT_BASE_DIR)/Makefile.base
+
+COMPONENT := $(shell basename $(CURDIR))
+TIMESTAMP := $(shell date -u '+%s')
+
+# Built by Terraform
+ECR_REPOSITORIES_JSON_FILE = "$(REPO_CICD_DIR)/../terraform/stacks/build_infrastructure/outputs/aws_ecr_repositories.json"
+REGISTRY = $(shell jq -r ".repositories.$(COMPONENT).repository_url" $(ECR_REPOSITORIES_JSON_FILE))
+
+REGISTRY_IMAGE = $(REGISTRY):$(GIT_SHA)
+
+# NOTE: This is hardcoded into Dockerfiles that load from previous builds
+INTERNAL_IMAGE = $(shell jq -r ".base_name" $(ECR_REPOSITORIES_JSON_FILE))/$(COMPONENT):current-build
+
+CONTAINER_RUN = docker run --rm --entrypoint="" $(INTERNAL_IMAGE)
+
+# Meta targets
+all: container test lint
+
+clean:
+	docker rmi $(INTERNAL_IMAGE) || /bin/true
+
+# Build Docker container
+# This is expected to be standard across all components
+container:
+	docker build --build-arg "build_repo_sha=$(GIT_SHA)" -t $(INTERNAL_IMAGE) .
+
+#
+# Common CI/CD specific targets
+#
+ci-save-cache:
+	sdc_cicd_util docker cache save-image $(INTERNAL_IMAGE)
+
+ci-load-cache:
+	sdc_cicd_util docker cache load-image $(INTERNAL_IMAGE)
+
+push-registry:
+	docker tag $(INTERNAL_IMAGE) $(REGISTRY_IMAGE)
+	docker push $(REGISTRY_IMAGE)

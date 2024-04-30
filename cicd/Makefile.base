@@ -1,0 +1,13 @@
+#
+# Makefile.base: Make targets and variables common to all Makefiles
+#
+
+SHELL := /bin/sh
+REPO_CICD_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+GIT_SHA := $(shell git rev-parse HEAD)
+
+# The default target is the first command
+default: all
+
+# https://stackoverflow.com/questions/44492805/declare-all-targets-phony
+.PHONY: *
