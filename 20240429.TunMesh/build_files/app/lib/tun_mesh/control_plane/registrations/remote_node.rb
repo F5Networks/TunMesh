@@ -162,6 +162,7 @@ module TunMesh
                 @manager.monitors.increment_gauge(id: :remote_tx_packets_by_source_node, labels: { source_node_id: id }) if TunMesh::CONFIG.values.monitoring.enable_node_packet_metrics
               rescue StandardError => exc
                 @logger.warn("transmit_worker: Iteration caught exception: #{exc.class}: #{exc}")
+                @logger.debug(exc.backtrace)
                 @logger.warn("Dropping packet #{packet.id}: Exception") if packet&.id
                 @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :exception })
               end
