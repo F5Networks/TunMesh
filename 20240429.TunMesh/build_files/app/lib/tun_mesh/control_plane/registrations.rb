@@ -12,6 +12,7 @@ module TunMesh
         @manager = manager
 
         @remote_nodes = RemoteNodePool.new(manager: @manager)
+        @startup_grace_threshold = Time.now.to_f + TunMesh::CONFIG.values.process.timing.registrations.startup_grace
 
         worker
       end
@@ -25,7 +26,7 @@ module TunMesh
 
       def health
         {
-          registered: !@remote_nodes.empty?,
+          registered: _registered_health,
           worker: worker.alive?,
         }
       end
@@ -120,6 +121,24 @@ module TunMesh
         )
       end
 
+      def _registered_health
+        return true unless @remote_nodes.empty?
+        return false if @startup_grace_threshold == :expired
+
+        if @startup_grace_threshold > Time.now.to_f
+          unless @startup_grace_announced
+            @logger.warn("Startup grace: Returning healthy registration state for #{TunMesh::CONFIG.values.process.timing.registrations.startup_grace}s")
+            @startup_grace_announced = true
+          end
+
+          return true
+        end
+
+        @logger.warn("Startup grace: Expired while unhealthy")
+        @startup_grace_threshold = :expired
+        return false        
+      end
+      
       def _update_registration(id:)
         remote_node = node_by_id(id)
         raise(ArgumentError, "Unknown remote node #{id}") unless remote_node

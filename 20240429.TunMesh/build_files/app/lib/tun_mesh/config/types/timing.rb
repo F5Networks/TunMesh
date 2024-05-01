@@ -13,17 +13,17 @@ module TunMesh
 
         def load_config_value(value:, **)
           case value
-          when Float
+          when ::Float
             @value = value
-          when Integer
+          when ::Integer
             @value = value
-          when String
+          when ::String
             @value = _parse_string_value(value)
           else
             raise(Errors::TypeError, "Cannot parse type #{value.class} into timing value")
           end
 
-          raise(Errors::ValueError, "Value outside allowed range #{min} .. #{max}") if @value < @min || @value > @max
+          raise(Errors::ValueError, "Value outside allowed range #{@min} .. #{@max}") if @value < @min || @value > @max
         end
 
         private

@@ -13,9 +13,9 @@ module TunMesh
 
           {
             key: @key,
-            description_short: @description_short,
+            description_short: @description_short
           }.each_pair do |name, value|
-            raise(ArgumentError, "#{key} is required") if value.nil?
+            raise(ArgumentError, "#{name} is required") if value.nil?
           end
 
           @value = nil
@@ -66,11 +66,11 @@ module TunMesh
         end
 
         def to_s
-          @value.to_s
+          value.to_s
         end
 
         def value
-          return @value if @value
+          return @value unless @value.nil?
 
           return default
         end

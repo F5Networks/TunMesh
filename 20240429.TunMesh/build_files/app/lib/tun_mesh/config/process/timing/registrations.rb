@@ -28,6 +28,15 @@ module TunMesh
             )
 
             add_field(
+              Types::Timing.new(
+                key: 'startup_grace',
+                default: 0,
+                description_short: 'Amount of time after startup that the registrations health check will pass, regardless of registration state.',
+                description_long: 'Intended to allow new nodes to enter the service discovery pool so that new new clusters can bootstrap.'
+              )
+            )
+
+            add_field(
               RegistrationGroup.new(
                 key: 'local',
                 description_short: 'Timing values related to registrations to nodes within the same local subnet',

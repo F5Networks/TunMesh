@@ -17,7 +17,7 @@ module TunMesh
             '  [Deployment Unique Key 1]: [Deployment Unique Value 1]',
             '  [Deployment Unique Key 2]: [Deployment Unique Value 2]',
             '  ...',
-            '  [Deployment Unique Key n]: [Deployment Unique Value n]',
+            '  [Deployment Unique Key n]: [Deployment Unique Value n]'
           ]
 
           return lines if required

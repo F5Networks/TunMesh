@@ -12,13 +12,13 @@ module TunMesh
 
         def _parse_value(value)
           case value
-          when TrueClass
+          when ::TrueClass
             return true
-          when FalseClass
+          when ::FalseClass
             return false
-          when String
-            return true if string.downcase == 'true'
-            return false if string.downcase == 'false'
+          when ::String
+            return true if value.downcase == 'true'
+            return false if value.downcase == 'false'
 
             raise(Errors::ValueError, 'Not a boolean string value')
           else
