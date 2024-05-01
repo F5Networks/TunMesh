@@ -9,12 +9,12 @@ module TunMesh
         # tun queues are currently proper interprocess
         # The tun_handler program needs high privilege to cfreate a network device and update routes
         # As such it performs only the minimum abount of processing due to the high privilege level needed.
-        # As of 20240423 this app does not fork to drop privileges, because MVP.
-        tun_read: 0x00,     # Packets: tun -> app
-        tun_write: 0x01,    # Packets: app -> tun
-        tun_heartbeat: 0x02 # heartbeat stamps
+        tun_read:      0x00, # Packets: tun -> app
+        tun_write:     0x01, # Packets: app -> tun
+        tun_heartbeat: 0x02, # heartbeat stamps
+        tun_monitor:   0x03  # Monitor metrics feedback
 
-        # 0x03 - 0x0f available
+        # 0x04 - 0x0f available
       }.freeze
 
       QUEUE_SUB_IDS.each_key do |queue_name|

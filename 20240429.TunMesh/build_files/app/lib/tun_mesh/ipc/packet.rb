@@ -18,7 +18,7 @@ module TunMesh
         uint16 :ethertype
       end
 
-      VERSION = 0x02
+      VERSION = 0x03
 
       endian :big
 
@@ -30,6 +30,9 @@ module TunMesh
 
       string :md5_raw, read_length: 16, value: -> { _calculate_raw_md5 }
       uint64 :internal_stamp
+
+      uint8  :source_node_id_length, value: -> { source_node_id.length }
+      string :source_node_id, read_length: :source_node_id_length
 
       virtual :version_test, assert: -> { version == VERSION }
       virtual :data_length_test, assert: -> { data.length == data_length }
@@ -49,6 +52,7 @@ module TunMesh
         rv.ethertype = payload.fetch('ethertype')
         rv.b64_data = payload.fetch('b64_data')
         rv.internal_stamp = payload.fetch('internal_stamp')
+        rv.source_node_id = payload.fetch('source_node_id')
 
         raise(PayloadError.new("Checksum mismatch: Expected #{payload[:md5]}, got #{rv.md5}")) unless rv.md5 == payload.fetch('md5')
 
@@ -58,10 +62,12 @@ module TunMesh
       end
 
       # Loads with from a rb_tuntap response with pkt_info enabled
-      def self.from_tun(raw:)
+      def self.from_tun(raw:, rx_stamp:)
         header = TunHeader.read(raw[0..3])
         @flags = header.flags
-        new(data: raw[4..-1], ethertype: header.ethertype)
+        packet = new(data: raw[4..-1], ethertype: header.ethertype, source_node_id: TunMesh::CONFIG.node_id)
+        packet.stamp = rx_stamp
+        return packet
       end
 
       def b64_data
@@ -83,7 +89,7 @@ module TunMesh
 
       # For logging/debugging
       def id
-        rv = "#{self.class}(#{stamp}-#{sprintf('0x%04x', ethertype)}-#{md5})"
+        rv = "#{self.class}(#{source_node_id}-#{stamp}-#{sprintf('0x%04x', ethertype)}-#{md5})"
         rv += "(Flags: #{sprintf('0x%04x', flags)})" unless flags.nil?
         return rv
       end
@@ -108,6 +114,7 @@ module TunMesh
           b64_data: b64_data,
           md5: md5,
           internal_stamp: internal_stamp.to_i,
+          source_node_id: source_node_id
         }
       end
 
@@ -126,7 +133,8 @@ module TunMesh
         Digest::MD5.digest([
           data,
           ethertype,
-          internal_stamp
+          internal_stamp,
+          source_node_id
         ].join)
       end
     end

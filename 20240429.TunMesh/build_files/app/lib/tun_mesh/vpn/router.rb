@@ -11,11 +11,10 @@ module TunMesh
     class Router
       DECODED_PACKET = Struct.new(:net_config, :net_packet, :proto)
 
-      def initialize(manager:, queue_key:)
+      def initialize(manager:, queue_manager:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
         @manager = manager
-
-        @queue_manager = TunMesh::IPC::QueueManager.new(queue_key: queue_key)
+        @queue_manager = queue_manager
         @last_tun_heartbeat = 0
 
         _read_pipe_thread
@@ -268,7 +267,6 @@ module TunMesh
       def _tx_packet(decoded_packet:, packet:, remote_node:)
         @logger.debug { "TX: Transmitting packet #{packet.id} to #{remote_node.node_info.id} / #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str}" }
         remote_node.transmit_packet(packet: packet)
-        @manager.monitors.increment_gauge(id: :remote_tx_packets)
       end
     end
   end

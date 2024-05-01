@@ -158,6 +158,8 @@ module TunMesh
 
                 api_client.transmit_packet(packet: packet)
                 @logger.debug("Successfully transmitted #{packet.id}")
+                @manager.monitors.increment_gauge(id: :remote_tx_packets)
+                @manager.monitors.increment_gauge(id: :remote_tx_packets_by_source_node, labels: { source_node_id: id }) if TunMesh::CONFIG.values.monitoring.enable_node_packet_metrics
               rescue StandardError => exc
                 @logger.warn("transmit_worker: Iteration caught exception: #{exc.class}: #{exc}")
                 @logger.warn("Dropping packet #{packet.id}: Exception") if packet&.id

@@ -5,7 +5,8 @@ describe TunMesh::IPC::Packet do
   subject do
     described_class.new(
       data: SecureRandom.hex,
-      internal_stamp: rand(1..(2**64))
+      internal_stamp: rand(1..(2**64)),
+      source_node_id: SecureRandom.uuid
     )
   end
 
@@ -19,6 +20,7 @@ describe TunMesh::IPC::Packet do
       ethertype: %i[id md5 md5_raw],
       internal_stamp: %i[stamp id md5 md5_raw],
       stamp: %i[internal_stamp id md5 md5_raw],
+      source_node_id: %i[id md5 md5_raw]
     }
 
     test_config.each_pair do |attr_name, dependent_attrs|
@@ -40,6 +42,8 @@ describe TunMesh::IPC::Packet do
             rand(1..(2**16))
           when :stamp
             rand * (2**32)
+          when :source_node_id
+            SecureRandom.uuid
           else
             raise("INTERNAL ERROR: unknown attribute #{test_attr}")
           end
@@ -96,7 +100,8 @@ describe TunMesh::IPC::Packet do
         data_length: 1,
         data: 4,
         md5_raw: 36,
-        internal_stamp: 56
+        internal_stamp: 56,
+        source_node_id: 65
       }.each do |attr_name, poke_index|
         describe "when #{attr_name} is incorrect" do
           let(:bad_serialized_value) do

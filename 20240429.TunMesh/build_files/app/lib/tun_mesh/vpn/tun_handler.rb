@@ -4,6 +4,7 @@ require 'rb_tuntap'
 require './lib/tun_mesh/config'
 require './lib/tun_mesh/control_plane/structs/net_address'
 require './lib/tun_mesh/ipc/packet'
+require './lib/tun_mesh/ipc/tun_monitor_metric'
 require './lib/tun_mesh/ipc/queue_manager'
 
 module TunMesh
@@ -75,21 +76,30 @@ module TunMesh
                          begin
                            packet = TunMesh::IPC::Packet.decode(@queue_manager.tun_write.pop)
                            break if packet.nil?
-
-                           # TODO: Monitor the age as a metric, optional by source label
-                           # TODO: Monitor packets sent node -> node and packets recieved node -> node (Optional)
-                           @logger.debug { "Writing #{packet.id}: #{packet.data_length}b, #{Time.now.to_f - packet.stamp}s old" }
-                           tun.to_io.write(packet.to_tun)
-                           tun.to_io.flush
                          rescue Errno::EIDRM => exc
                            @logger.warn { "Queue shut down: #{exc.class}: #{exc}" }
                            break
                          rescue StandardError => exc
-                           if packet.nil?
-                             @logger.warn { "Failed to read tun_write packet: #{exc.class}: #{exc}" }
-                           else
-                             @logger.warn { "Failed to write #{packet.id}: #{exc.class}: #{exc}" }
-                           end
+                           @logger.warn { "Failed to read tun_write packet: #{exc.class}: #{exc}" }
+                           next
+                         end
+
+                         begin
+                           latency = Time.now.to_f - packet.stamp
+                           @logger.debug { "Writing #{packet.id}: #{packet.data_length}b, #{latency}s old" }
+                           tun.to_io.write(packet.to_tun)
+                           tun.to_io.flush
+                         rescue StandardError => exc
+                           @logger.warn { "Failed to write #{packet.id}: #{exc.class}: #{exc}" }
+                           next
+                         end
+
+                         begin
+                           next unless TunMesh::CONFIG.values.monitoring.enable_node_packet_metrics
+                           @queue_manager.tun_monitor.push(IPC::TunMonitorMetric.new(source_node_id: packet.source_node_id, latency: latency).encode)
+                         rescue StandardError => exc
+                           @logger.warn { "Failed to metrics for write #{packet.id}: #{exc.class}: #{exc}" }
+                           next
                          end
                        end
                      end)
@@ -97,9 +107,7 @@ module TunMesh
         threads.push(Thread.new do
                        loop do
                          raw_data = tun.to_io.sysread(tun.mtu + 4) # +4 for the header
-                         rx_stamp = Time.now.to_f
-                         packet = TunMesh::IPC::Packet.from_tun(raw: raw_data)
-                         packet.stamp = rx_stamp
+                         packet = TunMesh::IPC::Packet.from_tun(raw: raw_data, rx_stamp: Time.now.to_f)
                          @logger.debug { "Read #{packet.id} #{packet.data_length}b" }
                          @queue_manager.tun_read.push(packet.encode)
                        rescue StandardError => exc

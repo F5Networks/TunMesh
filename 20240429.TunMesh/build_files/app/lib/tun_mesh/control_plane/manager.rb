@@ -17,9 +17,10 @@ module TunMesh
       def initialize(queue_key:)
         @logger = Logger.new(STDERR, progname: self.class.to_s)
 
+        @queue_manager = TunMesh::IPC::QueueManager.new(queue_key: queue_key)
         @registrations = Registrations.new(manager: self)
-        @router = TunMesh::VPN::Router.new(manager: self, queue_key: queue_key)
-        @monitors = Monitoring.new
+        @router = TunMesh::VPN::Router.new(manager: self, queue_manager: @queue_manager)
+        @monitors = Monitoring.new(queue_manager: @queue_manager)
       end
 
       def api
@@ -58,6 +59,7 @@ module TunMesh
 
       def _health_sub_targets
         return {
+          monitoring: @monitors,
           registrations: @registrations,
           router: @router
         }

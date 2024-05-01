@@ -1,6 +1,7 @@
 require_relative '../group'
 require_relative '../types/hash'
 require_relative '../types/string'
+require_relative '../types/timing'
 
 module TunMesh
   class Config
