@@ -61,7 +61,7 @@ module TunMesh
         if @remote_nodes.id?(registration.local.id)
           @logger.debug("Refreshed registration from #{registration.local.id} (#{age}s old)")
         else
-          @logger.info("Received registration from #{registration.local.id} (#{age}s old)")
+          @logger.info("Received new registration from #{registration.local.id} (#{age}s old)")
         end
 
         @remote_nodes.register(api_client: api_client, registration: registration)
@@ -125,7 +125,7 @@ module TunMesh
         raise(ArgumentError, "Unknown remote node #{id}") unless remote_node
 
         if remote_node.registration_required?
-          @logger.info("Updating registration to #{id}")
+          @logger.debug("Updating registration to #{id}")
           begin
             _register(api_client: remote_node.api_client)
           rescue StandardError => exc
