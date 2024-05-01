@@ -30,7 +30,7 @@ module TunMesh
           @api_auth = api_auth
           @remote_id = remote_id
           @remote_url = remote_url.to_s
-          @logger = Logger.new(STDERR, progname: "#{self.class}(#{self.remote_id}@#{@remote_url})")
+          @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{self.remote_id}@#{@remote_url})")
 
           @persistent_http = PersistentHTTP.new(
             :name => "#{self.class}(#{@remote_url})",

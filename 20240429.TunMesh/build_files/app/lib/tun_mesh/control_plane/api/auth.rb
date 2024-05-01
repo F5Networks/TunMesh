@@ -11,7 +11,7 @@ module TunMesh
     class API
       class Auth
         def initialize(api:)
-          @logger = Logger.new(STDERR, progname: self.class.to_s)
+          @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
           @api = api
 
           @rsa_private = OpenSSL::PKey::RSA.generate 2048

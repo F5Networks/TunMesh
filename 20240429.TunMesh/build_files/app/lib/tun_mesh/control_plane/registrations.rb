@@ -8,7 +8,7 @@ module TunMesh
   module ControlPlane
     class Registrations
       def initialize(manager:)
-        @logger = Logger.new(STDERR, progname: self.class.to_s)
+        @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
         @manager = manager
 
         @remote_nodes = RemoteNodePool.new(manager: @manager)

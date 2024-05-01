@@ -1,5 +1,6 @@
 require_relative 'clustering'
 require_relative 'control_api'
+require_relative 'logging'
 require_relative 'monitoring'
 require_relative 'networking'
 require_relative 'process'
@@ -19,6 +20,7 @@ module TunMesh
         add_field(Version.new)
         add_field(Clustering.new)
         add_field(ControlAPI.new)
+        add_field(Logging.new)
         add_field(Monitoring.new)
         add_field(Networking.new)
         add_field(Process.new)

@@ -24,7 +24,7 @@ module TunMesh
 
           def initialize(id:, secret:)
             @id = id
-            @logger = Logger.new(STDERR, progname: "#{self.class}(#{id})")
+            @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{id})")
             @secret = secret
           end
 

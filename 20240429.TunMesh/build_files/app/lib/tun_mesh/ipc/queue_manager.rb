@@ -35,7 +35,7 @@ module TunMesh
           @queue_key = queue_key
         end
 
-        logger = Logger.new(STDERR, progname: self.class.to_s)
+        logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
 
         retries = 0
         begin

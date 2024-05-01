@@ -14,6 +14,9 @@ tun_mesh:
       cert_file_path: test_ssl/cert.pem
       key_file_path: test_ssl/key.pem
 
+  logging:
+    level: debug
+
   monitoring:
     method: prometheus
     prometheus:
