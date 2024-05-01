@@ -58,7 +58,12 @@ module TunMesh
         end
 
         age = Time.now.to_i - registration.stamp
-        @logger.info("Received registration from #{registration.local.id} (#{age}s old)")
+        if @remote_nodes.id?(registration.local.id)
+          @logger.debug("Refreshed registration from #{registration.local.id} (#{age}s old)")
+        else
+          @logger.info("Received registration from #{registration.local.id} (#{age}s old)")
+        end
+
         @remote_nodes.register(api_client: api_client, registration: registration)
 
         return registration

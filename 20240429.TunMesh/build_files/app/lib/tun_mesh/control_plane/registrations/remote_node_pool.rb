@@ -39,6 +39,10 @@ module TunMesh
           end
         end
 
+        def id?(id)
+          @nodes.key?(id)
+        end
+
         def ids
           @nodes.keys
         end
