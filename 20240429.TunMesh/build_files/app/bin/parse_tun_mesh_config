@@ -4,5 +4,5 @@ require 'yaml'
 
 require './lib/tun_mesh/config'
 
-TunMesh::CONFIG.parse_file(ARGV[0])
+TunMesh::CONFIG.config_path = ARGV[0]
 puts YAML.dump(TunMesh::CONFIG.values)

@@ -59,6 +59,18 @@ module TunMesh
             EOF
           )
         )
+
+        add_field(
+          Types::Bool.new(
+            key: 'reload_config_on_bootstrap',
+            default: false,
+            description_short: 'Reload the config file when bootstrapping',
+            description_long: <<~EOF
+              When true the config file will be reloaded before attempting bootstrapping.
+              Intended for use with bootstrap_retries.
+            EOF
+          )
+        )
       end
     end
   end

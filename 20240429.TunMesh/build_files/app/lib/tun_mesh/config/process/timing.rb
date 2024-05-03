@@ -16,7 +16,7 @@ module TunMesh
               All values are durations/intervals.
               Integer values are seconds.
               Suffixed values of the form [integer value][smhd] are supported, where s is seconds, m is minutes, h is hours, and d is days.
-              Ranges of the form [min]..[max][suffix] are also supported, with the actual value being random between min and max, but note that the random value is calculated on config load and static for the duration of the process.
+              Ranges of the form [min]..[max][suffix] are also supported, with the actual value being random between min and max, but note that the random value is calculated on config load, not at use.
             EOF
           )
 

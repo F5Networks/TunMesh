@@ -35,6 +35,7 @@ module TunMesh
         @bootstrap_attempts += 1
 
         @logger.info("Bootstrapping into cluster, attempt #{@bootstrap_attempts}/#{TunMesh::CONFIG.values.clustering.bootstrap_retries + 1}")
+        TunMesh::CONFIG.parse_config! if TunMesh::CONFIG.values.clustering.reload_config_on_bootstrap
         TunMesh::CONFIG.values.clustering.bootstrap_node_urls.each do |node_url|
           bootstrap_node(remote_url: node_url)
         end
