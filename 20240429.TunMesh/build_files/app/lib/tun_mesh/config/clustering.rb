@@ -37,7 +37,7 @@ module TunMesh
               This list does not need to be updated as the cluster nodes change.
               As long as new nodes register into any node of the existing cluster the new node address will automatically propagate back to existing nodes regardless of this setting.
               Intended to be generated through service discovery of the container platform.
-              A load-balanced URL is also suitable if the platform supports load balancing.
+              A load-balanced URL is currently not supported.
               An empty list or nil value is allowed for the first node brought online, but subsequent must nodes must bootstrap into the node with the empty list for that node to join the cluster.
             EOF
           )
