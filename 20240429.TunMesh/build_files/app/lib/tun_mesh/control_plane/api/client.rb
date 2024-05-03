@@ -46,13 +46,17 @@ module TunMesh
           end
 
           @persistent_http = PersistentHTTP.new(
-            :name => "#{self.class}(#{@remote_url})",
-            :logger => @logger,
-            :pool_size => 3, # Only expected to be accessed by the Registrations::RemoteNode worker and the Registrations worker
-            :pool_timeout => 5,
-            :warn_timeout => 0.25,
-            :force_retry => true,
-            :url => @remote_url
+            name: "#{self.class}(#{@remote_url})",
+            logger: @logger,
+            url: @remote_url,
+
+            force_retry:  true,
+            pool_size:    3, # Only expected to be accessed by the Registrations::RemoteNode worker and the Registrations worker
+            pool_timeout: 5,
+
+            open_timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
+            read_timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
+            warn_timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
           )
 
           @session_auth_lock = Mutex.new
@@ -113,7 +117,9 @@ module TunMesh
           begin
             # Don't use @persistent_http or @logger as they're not initialized yet
             # We need the ID to init the logger to init persistent_http
-            resp = HTTParty.get(url.to_s, verify: false)
+            resp = HTTParty.get(url.to_s,
+                                timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
+                                verify: false)
 
             raise(RequestException.new("HTTP #{resp.code}", resp.code)) if resp.code != 200
             raise(RequestException.new('Invalid response', resp.code)) unless resp['id']

@@ -20,6 +20,14 @@ module TunMesh
             EOF
           )
 
+          add_field(
+              Types::Timing.new(
+                key: 'request_timeout',
+                default: 1.0,
+                description_short: 'Cluster request timeout',
+              )
+          )
+
           add_field(Process::Timing::Auth.new)
           add_field(Process::Timing::Registrations.new)
           add_field(Process::Timing::Network.new)
