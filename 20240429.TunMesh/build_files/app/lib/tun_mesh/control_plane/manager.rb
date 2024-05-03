@@ -27,13 +27,6 @@ module TunMesh
         @api ||= API.new(manager: self)
       end
 
-      def bootstrap!
-        @logger.info('Bootstrapping into cluster')
-        TunMesh::CONFIG.values.clustering.bootstrap_node_urls.each do |node_url|
-          @registrations.bootstrap_node(remote_url: node_url)
-        end
-      end
-
       def health
         _health_sub_targets.transform_values(&:health)
       end
@@ -48,11 +41,7 @@ module TunMesh
       end
 
       def run_api!
-        api.run! do
-          # Only bootstrap once the API is up.
-          # Otherwise it will fail as the other node calls back to us the check our ID
-          bootstrap!
-        end
+        api.run!
       end
 
       private

@@ -17,6 +17,19 @@ module TunMesh
         worker
       end
 
+      def bootstrapped?
+        @bootstrapped
+      end
+
+      def bootstrap!
+        @logger.info('Bootstrapping into cluster')
+        TunMesh::CONFIG.values.clustering.bootstrap_node_urls.each do |node_url|
+          bootstrap_node(remote_url: node_url)
+        end
+
+        @bootstrapped = true
+      end
+
       def bootstrap_node(remote_url:)
         _register(api_client: @manager.api.new_client(remote_url: remote_url))
       rescue StandardError => exc
@@ -99,6 +112,8 @@ module TunMesh
       private
 
       def _groom
+        bootstrap! unless bootstrapped?
+
         if @remote_nodes.empty?
           @logger.warn('No remote nodes registered')
           return
