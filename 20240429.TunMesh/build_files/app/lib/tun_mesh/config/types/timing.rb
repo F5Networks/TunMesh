@@ -31,15 +31,28 @@ module TunMesh
         def _parse_string_value(value)
           case value[-1].downcase
           when 's'
-            return Float(value[0..-2])
+            return _parse_string_value_no_suffix(value[0..-2])
           when 'm'
-            return Float(value[0..-2]) * 60
+            return _parse_string_value_no_suffix(value[0..-2]) * 60
           when 'h'
-            return Float(value[0..-2]) * 3600
+            return _parse_string_value_no_suffix(value[0..-2]) * 3600
           when 'd'
-            return Float(value[0..-2]) * 86400
+            return _parse_string_value_no_suffix(value[0..-2]) * 86400
           else
+            return _parse_string_value_no_suffix(value)
+          end
+        end
+
+        def _parse_string_value_no_suffix(value)
+          split_value = value.split('..')
+          if split_value.length == 1
             return Float(value)
+          elsif split_value.length == 2
+            range_low = Float(split_value[0])
+            range_high = Float(split_value[1])
+            return(rand(range_low..range_high))
+          else
+            raise(Errors::ValueError, 'Unparsable value')
           end
         end
       end

@@ -42,12 +42,23 @@ describe TunMesh::Config::Types::Timing do
         hours: { suffix: 'h', scalar: 3600 },
         days: { suffix: 'd', scalar: 86400 }
       }.each do |description, config|
-        it "supports #{description} strings" do
+        it "supports #{description} exact strings" do
           test_rand_input = rand(1.0..10000.0)
           test_value_input = "#{test_rand_input}#{config[:suffix]}"
           test_value_output = test_rand_input * config[:scalar]
           subject.load_config_value(value: test_value_input)
           expect(subject.value).to eq test_value_output
+        end
+
+        it "supports #{description} range strings" do
+          test_rand_input_low = rand(1.0..5000.0)
+          test_rand_input_high = rand(test_rand_input_low..10000.0)
+          test_value_input = "#{test_rand_input_low}..#{test_rand_input_high}#{config[:suffix]}"
+          test_value_output_low = test_rand_input_low * config[:scalar]
+          test_value_output_high = test_rand_input_high * config[:scalar]
+          subject.load_config_value(value: test_value_input)
+          expect(subject.value).to be >= test_value_output_low
+          expect(subject.value).to be <= test_value_output_high
         end
       end
     end
