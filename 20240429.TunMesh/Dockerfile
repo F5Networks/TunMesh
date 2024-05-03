@@ -38,3 +38,7 @@ RUN bundle install
 
 COPY build_files/ /
 CMD ["bundle", "exec", "./bin/tun_mesh"]
+
+ARG build_repo_sha
+ARG build_version
+RUN echo "${build_version} ${build_repo_sha} Build Date: $(date)" > /app/build_info.txt

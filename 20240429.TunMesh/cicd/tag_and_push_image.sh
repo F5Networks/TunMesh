@@ -11,7 +11,7 @@ if [ -z "$2" ]; then
     exit 1
 fi
 
-set -euo pipefail
+set -xeuo pipefail
 
 function tag_and_push {
     docker tag "${SOURCE_IMAGE}" "${OUTPUT_BASE_IMAGE}:${1}"
@@ -23,9 +23,10 @@ function tag_and_push {
 SOURCE_IMAGE="${1}"
 OUTPUT_BASE_IMAGE="${2}"
 
-SCRIPT_DIR=$(dirname "$0")
-source "${SCRIPT_DIR}/_version_common.sh"
-
+IMAGE_LABELS_JSON=$(docker inspect tjnii-sandbox/tun_mesh:current-build | jq '.[0].Config.Labels' -ce)
+SEMVER_FULL=$(echo "${IMAGE_LABELS_JSON}" | jq -re '."com.f5.tun_mesh.version"')
+REPO_CLEAN=$(echo "${IMAGE_LABELS_JSON}" | jq -re '."com.f5.tun_mesh.repo_clean"')
+              
 # Following the same basic conventions as Alpine
 tag_and_push "${SEMVER_FULL}"
 tag_and_push "edge"
@@ -34,6 +35,10 @@ if [ ${REPO_CLEAN} != true ]; then
     echo "Unclean repo, not pushing bare semver and version major images"
     exit 0
 fi
+
+SEMVER_BARE=$(echo "${SEMVER_FULL}" | cut -f 1 -d -)
+SEMVER_VERSION_MAJOR=$(echo "${SEMVER_BARE}" | cut -f 1 -d .)
+SEMVER_VERSION_MINOR=$(echo "${SEMVER_BARE}" | cut -f 2 -d .)
 
 tag_and_push "${SEMVER_BARE}"
 tag_and_push "${SEMVER_VERSION_MAJOR}.${SEMVER_VERSION_MINOR}"

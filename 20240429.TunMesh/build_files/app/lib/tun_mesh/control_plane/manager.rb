@@ -1,4 +1,5 @@
 require 'logger'
+require 'pathname'
 require 'securerandom'
 
 require './lib/tun_mesh/config'
@@ -21,6 +22,8 @@ module TunMesh
         @registrations = Registrations.new(manager: self)
         @router = TunMesh::VPN::Router.new(manager: self, queue_manager: @queue_manager)
         @monitors = Monitoring.new(queue_manager: @queue_manager)
+
+        _log_build_info
       end
 
       def api
@@ -52,6 +55,15 @@ module TunMesh
           registrations: @registrations,
           router: @router
         }
+      end
+
+      def _log_build_info
+        info_file = Pathname.new('/app/build_info.txt') # Generated in the Dockerfile
+        if info_file.file?
+          @logger.info("Tun Mesh: #{info_file.read.strip}")
+        else
+          @logger.warn("Build info file #{info_file} missing!")
+        end
       end
     end
   end

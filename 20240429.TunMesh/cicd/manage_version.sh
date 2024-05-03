@@ -9,6 +9,7 @@ source "${SCRIPT_DIR}/_version_common.sh"
 
 function show_help {
     echo "$0: Manage project version"
+    echo "  -c: Show if repo is clean"
     echo "  -m: Increment minor"
     echo "  -M: Increment major"
     echo "  -s: Show current full version"
@@ -20,11 +21,15 @@ function show_help {
 
 ACTION="default"
 
-while getopts ":hMms" arg; do
+while getopts ":chMms" arg; do
     case $arg in
         h)
             show_help
-        ;;
+            ;;
+        c)
+            echo "${REPO_CLEAN}"
+            exit 0
+            ;;
         s)
             echo "${SEMVER_FULL}"
             exit 0        
