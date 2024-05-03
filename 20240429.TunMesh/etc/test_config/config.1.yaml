@@ -1,3 +1,7 @@
+# NOTE: Networks:
+#   This config assumes the host IP is 192.168.128.1 with the network being 192.168.128.0/24
+#   192.168.129.0/24 is used for the mesh.
+#   These values will likely need tuning depending on the host config.
 ---
 tun_mesh:
   config_version: 1.0
