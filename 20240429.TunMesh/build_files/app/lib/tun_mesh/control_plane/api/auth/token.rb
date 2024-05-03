@@ -60,11 +60,11 @@ module TunMesh
             sig = _payload_sig(payload: payload)
             raise(AuthError, "Signature Mismatch.  Expected #{sig}, got #{claims.fetch(:sig)}") if claims.fetch(:sig) != sig
 
-            @logger.debug("Validated token issued by #{claims[:iss]} for payload #{sig}")
+            @logger.debug("Validated token issued by #{claims[:iss]} for payload #{sig} with auth #{id}")
 
             return claims[:iss]
           rescue StandardError => exc
-            @logger.warn("Authentication failed: #{exc.class}: #{exc}")
+            @logger.warn("Authentication failed using auth #{id}: #{exc.class}: #{exc}")
             raise(AuthError, 'Failed.')
           end
 

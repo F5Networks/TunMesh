@@ -123,6 +123,7 @@ module TunMesh
           raise(ArgumentError, "new_auth is not a Auth::Token, got #{new_auth.class}") unless new_auth.is_a? Auth::Token
 
           @session_auth = new_auth
+          @logger.debug("Updated session auth to #{@session_auth.id} via session_auth=")
         end
 
         def transmit_packet(packet:)
@@ -176,7 +177,7 @@ module TunMesh
           begin
             auth.verify_http_authorization_header_value(header_value: resp['authorization'], payload: body)
           rescue StandardError => exc
-            raise(RequestException.new("HTTP POST to #{path} failed response authorization verification: #{exc.class}: #{exc}", resp.code))
+            raise(RequestException.new("HTTP POST to #{path} using auth #{auth.id} failed response authorization verification: #{exc.class}: #{exc}", resp.code))
           end
 
           return body
@@ -239,6 +240,7 @@ module TunMesh
 
             @session_auth_age = Time.now.to_i
             @session_auth = new_token
+            @logger.debug("New sesson auth initialized successfully to #{session_auth.id}")
           rescue RequestException => exc
             raise exc if post_kwargs[:path] != "/tunmesh/auth/v0/init_session/#{TunMesh::CONFIG.node_id}"
 
@@ -246,7 +248,7 @@ module TunMesh
             when '404'
               @logger.warn('Session regeneration returned 404: This node not known to the remote node')
             when '401'
-              @logger.warn('Session regeneration returned 401: Remote rejected session auth')
+              @logger.warn("Session regeneration returned 401: Remote rejected session auth #{session_auth.id}")
             else
               raise exc
             end
@@ -258,7 +260,6 @@ module TunMesh
             retry
           end
 
-          @logger.debug('New sesson auth initialized successfully')
           return @session_auth
         end
       end
