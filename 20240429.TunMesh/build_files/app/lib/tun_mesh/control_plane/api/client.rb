@@ -21,16 +21,29 @@ module TunMesh
           end
         end
 
-        attr_reader :remote_url
+        attr_reader :remote_id, :remote_url
 
         def initialize(api_auth:, remote_url:, remote_id: nil)
           raise(ArgumentError, 'Missing api_auth') if api_auth.nil?
           raise(ArgumentError, 'Missing remote_url') if remote_url.nil?
 
           @api_auth = api_auth
-          @remote_id = remote_id
           @remote_url = remote_url.to_s
-          @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{self.remote_id}@#{@remote_url})")
+
+          remote_info_resp = remote_info
+          raise(ArgumentError, "Remote URL #{remote_url} returns ID #{remote_info_resp['id']}, expected #{remote_id}") if remote_id && remote_id != remote_info_resp['id']
+          @remote_id = remote_info_resp['id']
+          @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{self.remote_id}@#{remote_url})")
+
+          if remote_info_resp['listen_url'] != @remote_url
+            # This is a handler for bootstrapping via load balanced URLs
+            # If we're passed a load balancer, immediately drop to the advertised URL
+            # Otherwise the session calls will get out of sync, this API protocol needs a 1:1 URL -> node mapping
+            # This is normal on startup, but not post bootstrap and only if configured with non-sticky load balancers in the bootstrap URL list.
+            @logger.warn("Updating remote_url from #{@remote_url} to #{remote_info_resp['listen_url']}")
+            @remote_url = remote_info_resp['listen_url']
+            @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{@remote_id}@#{@remote_url})")
+          end
 
           @persistent_http = PersistentHTTP.new(
             :name => "#{self.class}(#{@remote_url})",
@@ -95,10 +108,8 @@ module TunMesh
           @remote_rsa_pubkey ||= OpenSSL::PKey::RSA.new(_get_unauthed(path: '/tunmesh/auth/v0/rsa_public', expected_content_type: 'text/plain'))
         end
 
-        def remote_id
-          return @remote_id if @remote_id
-
-          url = Pathname.new(@remote_url).join('tunmesh/control/v0/node_info/id')
+        def remote_info
+          url = Pathname.new(@remote_url).join('tunmesh/control/v0/node_info')
           begin
             # Don't use @persistent_http or @logger as they're not initialized yet
             # We need the ID to init the logger to init persistent_http
@@ -107,11 +118,9 @@ module TunMesh
             raise(RequestException.new("HTTP #{resp.code}", resp.code)) if resp.code != 200
             raise(RequestException.new('Invalid response', resp.code)) unless resp['id']
 
-            @remote_id = resp['id']
-
-            return @remote_id
+            return resp.to_h
           rescue StandardError => exc
-            raise(exc, "Failed to perform ID GET to #{url}: #{exc}")
+            raise(exc, "Failed to perform node info GET to #{url}: #{exc}")
           end
         end
 

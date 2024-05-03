@@ -1,5 +1,6 @@
 require 'sinatra/extension'
 require 'sinatra/json'
+require './lib/tun_mesh/config'
 require_relative 'helpers'
 
 module TunMesh
@@ -13,12 +14,23 @@ module TunMesh
           # This const defines the args this route needs.
           REQUIRED_ARGS = %i[api_auth manager].freeze
 
-          get '/tunmesh/control/v0/node_info/id' do
+          get '/tunmesh/control/v0/node_info' do
             # No inbound auth, as this endpoint is intended for use when the other end doesn't know
             #   our ID (Bootstrapping by URL only) and as such can't set the aud claim.
             # Our ID isn't secret, so rather than add a exception to the Auth class just add this endpoint.
+            # The advertise URL is also not secret, and is included in case the request came in a load balancer.
             #
             # No return auth, as that could be used to crack the cluster shared secret, which is the weakest and not auto-rotated.
+            json({
+                   id: TunMesh::CONFIG.node_id,
+                   listen_url: TunMesh::CONFIG.values.clustering.control_api_advertise_url.to_s
+                 })
+          end
+
+          # Deprecated, /tunmesh/control/v0/node_info is now used.
+          # Kept for 0.4 -> 0.5 compatibility (One way, 0.5 registering to 0.4 will fail.)
+          # Same auth semantics as /tunmesh/control/v0/node_info
+          get '/tunmesh/control/v0/node_info/id' do
             json({ id: TunMesh::CONFIG.node_id })
           end
 
