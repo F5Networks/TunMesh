@@ -37,6 +37,18 @@ module TunMesh
             )
 
             add_field(
+              Types::Timing.new(
+                key: 'bootstrap_retry_interval',
+                default: 15,
+                description_short: 'Amount of time between bootstrap retries.',
+                description_long: <<~EOF
+                  Only active when tun_mesh/clustering/bootstrap_retries is enabled.
+                  Actual threshold will be a multiple of groom_interval.
+                EOF
+              )
+            )
+
+            add_field(
               RegistrationGroup.new(
                 key: 'local',
                 description_short: 'Timing values related to registrations to nodes within the same local subnet',

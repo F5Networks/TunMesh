@@ -12,22 +12,32 @@ module TunMesh
         @manager = manager
 
         @remote_nodes = RemoteNodePool.new(manager: @manager)
+
+        @bootstrap_attempts = 0
+        @last_bootstrap_attempt_stamp = 0
         @startup_grace_threshold = Time.now.to_f + TunMesh::CONFIG.values.process.timing.registrations.startup_grace
 
         worker
       end
 
       def bootstrapped?
-        @bootstrapped
+        return true unless @remote_nodes.empty?
+
+        # NOTE: if we bootstrap successfully and then laters groom all the remote nodes out of the node pool
+        #  this will cause bootstrapping to be re-attempted.  Considering this a feature not a bug.
+        return true if @bootstrap_attempts > TunMesh::CONFIG.values.clustering.bootstrap_retries
+
+        return false
       end
 
       def bootstrap!
-        @logger.info('Bootstrapping into cluster')
+        @last_bootstrap_attempt_stamp = Time.now.to_i
+        @bootstrap_attempts += 1
+
+        @logger.info("Bootstrapping into cluster, attempt #{@bootstrap_attempts}/#{TunMesh::CONFIG.values.clustering.bootstrap_retries + 1}")
         TunMesh::CONFIG.values.clustering.bootstrap_node_urls.each do |node_url|
           bootstrap_node(remote_url: node_url)
         end
-
-        @bootstrapped = true
       end
 
       def bootstrap_node(remote_url:)
@@ -112,7 +122,7 @@ module TunMesh
       private
 
       def _groom
-        bootstrap! unless bootstrapped?
+        bootstrap! if !bootstrapped? && (Time.now.to_i - @last_bootstrap_attempt_stamp) >= TunMesh::CONFIG.values.process.timing.registrations.bootstrap_retry_interval
 
         if @remote_nodes.empty?
           @logger.warn('No remote nodes registered')
