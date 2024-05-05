@@ -2,6 +2,7 @@ require './lib/tun_mesh/config'
 require_relative 'structs/node_info'
 require_relative 'structs/registration'
 require_relative 'registrations/errors'
+require_relative 'registrations/fault_tracker'
 require_relative 'registrations/remote_node_pool'
 
 module TunMesh
@@ -16,6 +17,10 @@ module TunMesh
         @bootstrap_attempts = 0
         @last_bootstrap_attempt_stamp = 0
         @startup_grace_threshold = Time.now.to_f + TunMesh::CONFIG.values.process.timing.registrations.startup_grace
+
+        @fault_trackers = Hash.new do |h,k|
+          h[k] = FaultTracker.new(ttl: TunMesh::CONFIG.values.process.timing.registrations.groom_interval)
+        end
 
         worker
       end
@@ -41,8 +46,17 @@ module TunMesh
         end
       end
 
-      def bootstrap_node(remote_url:)
-        _register(api_client: @manager.api.new_client(remote_url: remote_url))
+      def bootstrap_node(remote_url:, remote_node_id: nil)
+        if @fault_trackers[:bootstrap].blocked?(id: remote_url)
+          @logger.debug("Bootstrap to #{remote_url} blocked by fault tracker")
+          return
+        end
+
+        @logger.info("Bootstrapping remote node #{remote_node_id} at #{remote_url}")
+
+        @fault_trackers[:bootstrap].instrument(id: remote_url) do
+          _register(api_client: @manager.api.new_client(remote_url: remote_url))
+        end
       rescue StandardError => exc
         @logger.warn("Failed to bootstrap node at #{remote_url}: #{exc.class}: #{exc}")
         @logger.debug { exc.backtrace }
@@ -115,7 +129,13 @@ module TunMesh
         @worker ||= Thread.new do
           loop do
             sleep(TunMesh::CONFIG.values.process.timing.registrations.groom_interval)
+
+            begin
             _groom
+            rescue StandardError => exc
+              @logger.error("Worker thread caught exception: #{exc.class}: #{exc}")
+              @logger.debug(exc.backtrace)
+            end
           end
         end
       end
@@ -137,6 +157,7 @@ module TunMesh
           _update_registration(id: id)
         end
         @remote_nodes.groom!
+        @fault_trackers.values.each(&:groom)
       end
 
       def _register(api_client:)
@@ -169,10 +190,12 @@ module TunMesh
         remote_node = node_by_id(id)
         raise(ArgumentError, "Unknown remote node #{id}") unless remote_node
 
-        if remote_node.registration_required?
+        if remote_node.registration_required? && !@fault_trackers[:registration_update].blocked?(id: id)
           @logger.debug("Updating registration to #{id}")
           begin
-            _register(api_client: remote_node.api_client)
+            @fault_trackers[:registration_update].instrument(id: id) do
+              _register(api_client: remote_node.api_client)
+            end
           rescue StandardError => exc
             @logger.warn("Failed to register to node #{id}: #{exc.class}: #{exc}")
             @logger.debug { exc.backtrace }
@@ -185,8 +208,7 @@ module TunMesh
           # If the node is in the @remote_nodes list it will be handled by the outer loop
           next if @remote_nodes.node_by_id(remote_node_info.id)
 
-          @logger.info("Bootstrapping remote node #{remote_node_info.id} at #{remote_node_info.listen_url}, via #{id}")
-          bootstrap_node(remote_url: remote_node_info.listen_url)
+          bootstrap_node(remote_node_id: remote_node_info.id, remote_url: remote_node_info.listen_url)
         end
       end
     end
