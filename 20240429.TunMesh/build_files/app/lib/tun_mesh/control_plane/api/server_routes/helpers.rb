@@ -18,7 +18,7 @@ module TunMesh
 
           def self.ensure_rx_auth(auth:, body:, context:)
             raise('Missing authorization header') unless context.env['HTTP_AUTHORIZATION']
-            
+
             remote_node_id = auth.verify_http_authorization_header_value(
               header_value: context.env['HTTP_AUTHORIZATION'],
               payload: body,
@@ -32,7 +32,7 @@ module TunMesh
 
             return nil
           end
-          
+
           def self.ensure_json_content(context:)
             return true if context.env['CONTENT_TYPE'] == 'application/json'
 

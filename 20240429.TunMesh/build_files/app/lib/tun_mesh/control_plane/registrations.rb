@@ -183,9 +183,9 @@ module TunMesh
 
         @logger.warn("Startup grace: Expired while unhealthy")
         @startup_grace_threshold = :expired
-        return false        
+        return false
       end
-      
+
       def _update_registration(id:)
         remote_node = node_by_id(id)
         raise(ArgumentError, "Unknown remote node #{id}") unless remote_node

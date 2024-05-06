@@ -4,11 +4,11 @@ module TunMesh
       class FaultTracker
         class FaultBlocked < StandardError
         end
-        
+
         def initialize(ttl:)
           @tracker = {}
           @tracker_lock = Mutex.new
-          
+
           @ttl = ttl
         end
 
@@ -18,11 +18,11 @@ module TunMesh
             return @tracker.key?(id)
           end
         end
-        
+
         def groom
           @tracker_lock.synchronize { _groom }
-        end            
-        
+        end
+
         def instrument(id:)
           raise FaultBlocked if blocked?(id: id)
 
