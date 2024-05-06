@@ -47,6 +47,11 @@ module TunMesh
       end
 
       def bootstrap_node(remote_url:, remote_node_id: nil)
+        if remote_url == TunMesh::CONFIG.values.clustering.control_api_advertise_url.to_s
+          @logger.debug("Skipping bootstrap to #{remote_url}: Self")
+          return
+        end
+
         if @fault_trackers[:bootstrap].blocked?(id: remote_url)
           @logger.debug("Bootstrap to #{remote_url} blocked by fault tracker")
           return
