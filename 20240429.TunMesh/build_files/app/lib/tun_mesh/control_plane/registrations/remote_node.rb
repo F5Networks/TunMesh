@@ -13,15 +13,11 @@ module TunMesh
         def initialize(manager:, registration:, api_client: nil)
           @manager = manager
           @api_client = api_client
-          @registration = registration
+          update_registration(registration)
 
           @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{id})")
 
           @transmit_queue = Queue.new
-        end
-
-        def api_client
-          @api_client ||= @manager.api.new_client(remote_id: registration.local.id, remote_url: registration.local.listen_url)
         end
 
         def close
@@ -56,6 +52,7 @@ module TunMesh
         end
 
         def id
+          raise("ID Mismatch #{@id} / #{api_client.remote_id}") if @id && @id != api_client.remote_id
           @id ||= api_client.remote_id # This will get the ID if it is unknown
         end
 
@@ -108,13 +105,14 @@ module TunMesh
         def update_registration(new_registration)
           raise(ArgumentError, "new_registration not a Structs::Registration, got #{new_registration.class}") unless new_registration.is_a?(Structs::Registration)
 
-          @api_client = nil unless new_registration.local.listen_url == @api_client&.remote_url
-
+          @api_client = @manager.api.new_client(remote_url: new_registration.local.listen_url) unless new_registration.local.listen_url == @api_client&.remote_url
           raise("ID Mismatch #{id} / #{new_registration.local.id}") if id != new_registration.local.id
 
-          # Changing IPs is not supported.  This breaks a caching assumptions in RemoteNodePool
-          new_node_addresses = _node_addresses(tgt_registration: new_registration)
-          raise("Node addresses changed from #{node_addresses} to #{new_node_addresses}") if node_addresses != new_node_addresses
+          if @registration
+            # Changing IPs is not supported.  This breaks a caching assumptions in RemoteNodePool
+            new_node_addresses = _node_addresses(tgt_registration: new_registration)
+            raise("Node addresses changed from #{node_addresses} to #{new_node_addresses}") if node_addresses != new_node_addresses
+          end
 
           @registration = new_registration
         end

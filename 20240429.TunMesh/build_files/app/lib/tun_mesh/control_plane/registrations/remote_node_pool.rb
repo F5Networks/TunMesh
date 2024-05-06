@@ -24,7 +24,12 @@ module TunMesh
         def groom!
           @node_lookup_lock.synchronize do
             @nodes.delete_if do |node_id, node|
-              if node.stale?
+              if node_id != node.id
+                @logger.error("Node ID mismatch found: #{node_id} / #{node.id}")
+                _finalize_node(id: node_id)
+                _finalize_node(id: node.id)
+                true
+              elsif node.stale?
                 @logger.warn("Removing stale node #{node_id}")
                 _finalize_node(id: node_id)
                 true

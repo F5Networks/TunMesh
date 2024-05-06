@@ -23,7 +23,7 @@ module TunMesh
 
         attr_reader :remote_id, :remote_url
 
-        def initialize(api_auth:, remote_url:, remote_id: nil)
+        def initialize(api_auth:, remote_url:)
           raise(ArgumentError, 'Missing api_auth') if api_auth.nil?
           raise(ArgumentError, 'Missing remote_url') if remote_url.nil?
 
@@ -31,9 +31,8 @@ module TunMesh
           @remote_url = remote_url.to_s
 
           remote_info_resp = remote_info
-          raise(ArgumentError, "Remote URL #{remote_url} returns ID #{remote_info_resp['id']}, expected #{remote_id}") if remote_id && remote_id != remote_info_resp['id']
           @remote_id = remote_info_resp['id']
-          @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{self.remote_id}@#{remote_url})")
+          @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{@remote_id}@#{remote_url})")
 
           if remote_info_resp['listen_url'] != @remote_url
             # This is a handler for bootstrapping via load balanced URLs
