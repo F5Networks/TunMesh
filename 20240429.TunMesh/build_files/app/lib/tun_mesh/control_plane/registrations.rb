@@ -148,7 +148,12 @@ module TunMesh
       private
 
       def _groom
-        bootstrap! if !bootstrapped? && (Time.now.to_i - @last_bootstrap_attempt_stamp) >= TunMesh::CONFIG.values.process.timing.registrations.bootstrap_retry_interval
+        begin
+          bootstrap! if !bootstrapped? && (Time.now.to_i - @last_bootstrap_attempt_stamp) >= TunMesh::CONFIG.values.process.timing.registrations.bootstrap_retry_interval
+        rescue StandardError => exc
+          @logger.error("Failed to bootstrap: exception: #{exc.class}: #{exc}")
+          @logger.debug(exc.backtrace)
+        end
 
         if @remote_nodes.empty?
           @logger.warn('No remote nodes registered')
@@ -160,9 +165,24 @@ module TunMesh
           @remote_nodes.node_by_id(id).api_client.groom_auth
 
           _update_registration(id: id)
+        rescue StandardError => exc
+          @logger.error("Failed to groom remote node #{id}: exception: #{exc.class}: #{exc}")
+          @logger.debug(exc.backtrace)
         end
-        @remote_nodes.groom!
-        @fault_trackers.values.each(&:groom)
+
+        begin
+          @remote_nodes.groom!
+        rescue StandardError => exc
+          @logger.error("Failed to groom remote_nodes: exception: #{exc.class}: #{exc}")
+          @logger.debug(exc.backtrace)
+        end
+
+        begin
+          @fault_trackers.values.each(&:groom)
+        rescue StandardError => exc
+          @logger.error("Failed to groom fault_trackers: exception: #{exc.class}: #{exc}")
+          @logger.debug(exc.backtrace)
+        end
       end
 
       def _register(api_client:)
