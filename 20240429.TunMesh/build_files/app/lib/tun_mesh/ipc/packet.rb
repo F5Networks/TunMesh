@@ -89,14 +89,14 @@ module TunMesh
 
       # For logging/debugging
       def id
-        rv = "#{self.class}(#{source_node_id}-#{stamp}-#{sprintf('0x%04x', ethertype)}-#{md5})"
-        rv += "(Flags: #{sprintf('0x%04x', flags)})" unless flags.nil?
+        rv = "#{self.class}(#{source_node_id}-#{stamp}-#{format('0x%04x', ethertype)}-#{md5})"
+        rv += "(Flags: #{format('0x%04x', flags)})" unless flags.nil?
         return rv
       end
 
       def md5
         _calculate_raw_md5 if md5_raw.empty?
-        md5_raw.bytes.map { |b| sprintf('%02x', b) }.join
+        md5_raw.bytes.map { |b| format('%02x', b) }.join
       end
 
       def stamp

@@ -168,7 +168,7 @@ module TunMesh
       }.freeze
 
       def self.ethertype_name(ethertype:)
-        ETHERTYPES.fetch(ethertype, sprintf('[UNKNOWN ETHERTYPE 0x%04x]', ethertype))
+        ETHERTYPES.fetch(ethertype, format('[UNKNOWN ETHERTYPE 0x%04x]', ethertype))
       end
 
       def self.l3_packet_by_ethertype(ethertype:)

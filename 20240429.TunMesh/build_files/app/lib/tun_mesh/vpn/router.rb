@@ -70,7 +70,7 @@ module TunMesh
         if net_packet_class.nil?
           @logger.debug do
             ethertype_name = TunMesh::VPN::Ethertypes.ethertype_name(ethertype: packet.ethertype)
-            "#{packet.id}: Dropping: Not a supported protocol: #{ethertype_name} (#{sprintf("0x%04x", packet.ethertype)})"
+            "#{packet.id}: Dropping: Not a supported protocol: #{ethertype_name} (#{format("0x%04x", packet.ethertype)})"
           end
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :unsupported })
           return
