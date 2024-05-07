@@ -126,12 +126,12 @@ describe TunMesh::IPC::Packet do
 
       let(:deserialized_output) { described_class.from_json(bad_serialized_input) }
 
-      TunMesh::IPC::Packet.new.to_h.keys.each do |attr_name|
+      TunMesh::IPC::Packet.new.to_h.each_key do |attr_name|
         describe "when #{attr_name} is incorrect" do
           let(:test_value) do
             case attr_name
             when :internal_stamp
-              rand(0..2**64)
+              rand(0..(2**64))
             else
               SecureRandom.hex
             end
