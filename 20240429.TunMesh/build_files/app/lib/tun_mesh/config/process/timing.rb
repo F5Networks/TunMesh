@@ -24,7 +24,7 @@ module TunMesh
             Types::Timing.new(
               key: 'request_timeout',
               default: 1.0,
-              description_short: 'Cluster request timeout',
+              description_short: 'Cluster request timeout'
             )
           )
 

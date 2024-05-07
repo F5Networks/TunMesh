@@ -12,7 +12,7 @@ module TunMesh
     attr_reader :node_id
 
     def initialize
-      @logger = Logger.new(STDERR, progname: self.class.to_s)
+      @logger = Logger.new($stderr, progname: self.class.to_s)
       @node_id = SecureRandom.uuid
     end
 

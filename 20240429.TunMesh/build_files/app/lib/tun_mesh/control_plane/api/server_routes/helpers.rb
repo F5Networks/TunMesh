@@ -28,7 +28,7 @@ module TunMesh
 
             remote_node_id = auth.verify_http_authorization_header_value(
               header_value: context.env['HTTP_AUTHORIZATION'],
-              payload: body,
+              payload: body
             )
 
             return remote_node_id

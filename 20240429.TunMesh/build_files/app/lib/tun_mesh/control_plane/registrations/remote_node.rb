@@ -16,7 +16,7 @@ module TunMesh
           @api_client = api_client
           update_registration(registration)
 
-          @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{id})")
+          @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{id})")
 
           @transmit_queue = Queue.new
         end

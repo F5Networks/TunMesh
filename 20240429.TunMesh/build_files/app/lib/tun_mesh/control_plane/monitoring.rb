@@ -8,7 +8,7 @@ module TunMesh
   module ControlPlane
     class Monitoring
       def initialize(queue_manager:)
-        @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+        @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
         @queue_manager = queue_manager
         _tun_monitor_worker if TunMesh::CONFIG.values.monitoring.enable_node_packet_metrics
 

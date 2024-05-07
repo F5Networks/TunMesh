@@ -29,7 +29,7 @@ module TunMesh
               key: 'pub_key_size',
               default: 2048,
               min: 2048,
-              description_short: 'Node public key length',
+              description_short: 'Node public key length'
             )
           )
         end

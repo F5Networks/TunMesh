@@ -12,7 +12,7 @@ module TunMesh
       DECODED_PACKET = Struct.new(:net_config, :net_packet, :proto)
 
       def initialize(manager:, queue_manager:)
-        @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+        @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
         @manager = manager
         @queue_manager = queue_manager
         @last_tun_heartbeat = 0

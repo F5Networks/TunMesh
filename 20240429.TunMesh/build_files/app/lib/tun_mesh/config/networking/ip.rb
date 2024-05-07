@@ -18,7 +18,7 @@ module TunMesh
                 key: 'enable_broadcast',
                 proto: key,
                 default: false,
-                description_short: 'Enable tunneling broadcast traffic over the VPN.',
+                description_short: 'Enable tunneling broadcast traffic over the VPN.'
               )
             )
           end

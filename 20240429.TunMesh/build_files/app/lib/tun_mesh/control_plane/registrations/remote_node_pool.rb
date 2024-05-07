@@ -8,7 +8,7 @@ module TunMesh
         attr_reader :node_ids_by_address
 
         def initialize(manager:)
-          @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+          @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
           @manager = manager
           @nodes = {}
 

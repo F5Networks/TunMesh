@@ -16,7 +16,7 @@ module TunMesh
       attr_reader :api_auth, :monitors, :registrations, :router
 
       def initialize(queue_key:)
-        @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+        @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
 
         @queue_manager = TunMesh::IPC::QueueManager.new(queue_key: queue_key)
         @registrations = Registrations.new(manager: self)

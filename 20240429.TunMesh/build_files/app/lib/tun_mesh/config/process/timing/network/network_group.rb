@@ -14,7 +14,7 @@ module TunMesh
                 Types::Timing.new(
                   key: 'packet_expiration',
                   default: kwargs.fetch(:defaults).fetch(:packet_expiration),
-                  description_short: 'Number of seconds after which a packet is marked stale and dropped',
+                  description_short: 'Number of seconds after which a packet is marked stale and dropped'
                 )
               )
             end

@@ -30,7 +30,7 @@ module TunMesh
             key: 'enable_node_packet_metrics',
             proto: key,
             default: false,
-            description_short: 'Enable node level packet metrics.',
+            description_short: 'Enable node level packet metrics.'
           )
         )
 
