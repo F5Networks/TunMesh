@@ -96,6 +96,7 @@ module TunMesh
 
                          begin
                            next unless TunMesh::CONFIG.values.monitoring.enable_node_packet_metrics
+
                            @queue_manager.tun_monitor.push(IPC::TunMonitorMetric.new(source_node_id: packet.source_node_id, latency: latency).encode)
                          rescue StandardError => exc
                            @logger.warn { "Failed to metrics for write #{packet.id}: #{exc.class}: #{exc}" }

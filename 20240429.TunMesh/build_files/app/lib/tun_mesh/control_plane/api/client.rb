@@ -49,8 +49,8 @@ module TunMesh
             logger: @logger,
             url: @remote_url,
 
-            force_retry:  true,
-            pool_size:    3, # Only expected to be accessed by the Registrations::RemoteNode worker and the Registrations worker
+            force_retry: true,
+            pool_size: 3, # Only expected to be accessed by the Registrations::RemoteNode worker and the Registrations worker
             pool_timeout: 5,
 
             open_timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
@@ -88,10 +88,9 @@ module TunMesh
 
           decoded_resp = JSON.parse(raw_resp)
           return Auth::Token.new(
-                   id: decoded_resp.fetch('id'),
-                   secret: @api_auth.asymmetric_encryption.decrypt(ciphertext: decoded_resp.fetch('secret'))
-                 )
-
+            id: decoded_resp.fetch('id'),
+            secret: @api_auth.asymmetric_encryption.decrypt(ciphertext: decoded_resp.fetch('secret'))
+          )
         end
 
         def register(payload:)

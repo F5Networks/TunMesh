@@ -54,6 +54,7 @@ module TunMesh
 
         def id
           raise("ID Mismatch #{@id} / #{api_client.remote_id}") if @id && @id != api_client.remote_id
+
           @id ||= api_client.remote_id # This will get the ID if it is unknown
         end
 

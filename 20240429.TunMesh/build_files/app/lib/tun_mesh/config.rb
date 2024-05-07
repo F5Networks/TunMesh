@@ -17,13 +17,14 @@ module TunMesh
     end
 
     def config_path
-      self.config_path=ENV.fetch('TUNMESH_CONFIG_PATH', '/etc/tunmesh/config.yaml') unless @config_path
+      self.config_path = ENV.fetch('TUNMESH_CONFIG_PATH', '/etc/tunmesh/config.yaml') unless @config_path
       return @config_path
     end
 
     def config_path=(path)
       path_obj = Pathname.new(path) # Used in the file type for relative pathing
       raise("#{path} not a file") unless path_obj.file?
+
       @config_path = path_obj
     end
 

@@ -18,7 +18,7 @@ module TunMesh
         @last_bootstrap_attempt_stamp = 0
         @startup_grace_threshold = Time.now.to_f + TunMesh::CONFIG.values.process.timing.registrations.startup_grace
 
-        @fault_trackers = Hash.new do |h,k|
+        @fault_trackers = Hash.new do |h, k|
           h[k] = FaultTracker.new(ttl: TunMesh::CONFIG.values.process.timing.registrations.groom_interval)
         end
 
@@ -136,7 +136,7 @@ module TunMesh
             sleep(TunMesh::CONFIG.values.process.timing.registrations.groom_interval)
 
             begin
-            _groom
+              _groom
             rescue StandardError => exc
               @logger.error("Worker thread caught exception: #{exc.class}: #{exc}")
               @logger.debug(exc.backtrace)

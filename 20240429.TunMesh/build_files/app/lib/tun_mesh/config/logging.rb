@@ -17,8 +17,8 @@ module TunMesh
             description_short: 'Application log level',
             allowed_values: {
               error: 'Handleable error conditions.',
-              warn:  'Warnings about abnormal conditions.',
-              info:  'Normal, informational logs.',
+              warn: 'Warnings about abnormal conditions.',
+              info: 'Normal, informational logs.',
               debug: 'Detailed debugging information.',
             }
           )

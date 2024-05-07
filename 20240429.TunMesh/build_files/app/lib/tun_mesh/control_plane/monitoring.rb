@@ -100,7 +100,7 @@ module TunMesh
       end
 
       def update_histogram(**kwargs)
-         @outputs.update_histogram(**kwargs)
+        @outputs.update_histogram(**kwargs)
       end
 
       private
