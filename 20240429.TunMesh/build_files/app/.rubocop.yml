@@ -19,6 +19,11 @@ Naming/HeredocDelimiterNaming:
 Naming/RescuedExceptionsVariableName:
   Enabled: false
 
+# TODO: Some classes can use this, others are self-explanitory
+# Disabling for signal-to-noise
+Style/Documentation:
+  Enabled: false
+
 # Do not enforce number separators
 Style/NumericLiterals:
   Enabled: false

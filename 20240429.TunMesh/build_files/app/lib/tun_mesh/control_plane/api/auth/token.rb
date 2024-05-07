@@ -20,12 +20,17 @@ module TunMesh
           # Asymmetric keys aren't strictly needed, so favoring the simplicity of symmetric keys
           JWT_ALGORITHM = 'HS256'.freeze
 
-          attr_reader :id
+          attr_reader :id, :stamp
 
           def initialize(id:, secret:)
+            @stamp = Time.now.to_f
             @id = id
             @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{id})")
             @secret = secret
+          end
+
+          def age
+            Time.now.to_f - stamp
           end
 
           def new_http_authorization_header_value(**kwargs)

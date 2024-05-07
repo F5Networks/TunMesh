@@ -39,7 +39,7 @@ module TunMesh
               **NodeAddresses::FIELDS.keys.to_h do |proto|
                 [proto, TunMesh::CONFIG.values.networking[proto].node_address_cidr]
               end
-            )
+            ),
           )
         end
       end

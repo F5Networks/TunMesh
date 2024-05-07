@@ -61,6 +61,11 @@ module TunMesh
       raise exc
     end
 
+    # Test helper
+    def stub!
+      @parsed_top_group = Config::Top.new
+    end
+
     def values
       parse_config! unless @parsed_top_group
       @parsed_top_group.value

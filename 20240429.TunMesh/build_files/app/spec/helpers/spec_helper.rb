@@ -15,3 +15,6 @@ SimpleCov.start do
   end
   coverage_dir(coverage_path)
 end
+
+require './lib/tun_mesh/config'
+TunMesh::CONFIG.stub!

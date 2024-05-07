@@ -13,37 +13,34 @@ module TunMesh
           # This const defines the args this route needs.
           REQUIRED_ARGS = %i[api_auth].freeze
 
-          get '/tunmesh/auth/v0/rsa_public' do
-            status 200
-            content_type 'text/plain'
-            body settings.api_auth.rsa_public.to_s
-          end
-
           post '/tunmesh/auth/v0/init_session' do
             return unless Helpers.ensure_json_content(context: self)
 
-            body = request.body.read
-            remote_node_id = Helpers.ensure_rx_auth(auth: settings.api_auth.cluster_token, body: body, context: self)
-
-            resp_status = settings.api_auth.process_init_session_request(raw_request: body, remote_node_id: remote_node_id)
-            status resp_status
-            body('Failed') unless resp_status == 204
+            req_body = request.body.read
+            Helpers.ensure_mutual_auth(
+              auth: settings.api_auth.cluster_token,
+              body: req_body,
+              context: self
+            ) do |remote_node_id|
+              settings.api_auth.process_init_session_request(raw_request: req_body, remote_node_id: remote_node_id)
+            end
           end
 
           post '/tunmesh/auth/v0/init_session/:remote_node_id' do |remote_node_id|
             return unless Helpers.ensure_json_content(context: self)
 
-            unless settings.api_auth.remote_node_session_auth(remote_node_id: remote_node_id)
+            session_auth = settings.api_auth.session_auth_for_node_id(id: remote_node_id)
+            unless session_auth
               status 404
             else
-              body = request.body.read
-              remote_node_id = Helpers.ensure_rx_auth(auth: settings.api_auth.remote_node_session_auth(remote_node_id: remote_node_id),
-                                                      body: body,
-                                                      context: self)
-
-              resp_status = settings.api_auth.process_init_session_request(raw_request: body, remote_node_id: remote_node_id)
-              status resp_status
-              body('Failed') unless resp_status == 204
+              req_body = request.body.read
+              Helpers.ensure_mutual_auth(
+                auth: session_auth,
+                body: req_body,
+                context: self
+              ) do |remote_node_id|
+                settings.api_auth.process_init_session_request(raw_request: req_body, remote_node_id: remote_node_id)
+              end
             end
           end
         end

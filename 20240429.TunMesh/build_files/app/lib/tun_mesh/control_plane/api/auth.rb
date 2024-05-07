@@ -1,20 +1,23 @@
 require 'base64'
 require 'json'
 require 'logger'
-require 'openssl'
 
 require './lib/tun_mesh/config'
 require_relative 'auth/token'
+require_relative 'auth/asymmetric_encryption/local'
+require_relative 'auth/asymmetric_encryption/remote'
 
 module TunMesh
   module ControlPlane
     class API
       class Auth
+        attr_reader :asymmetric_encryption
+
         def initialize(api:)
-          @logger = Logger.new(STDERR, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+          @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
           @api = api
 
-          @rsa_private = OpenSSL::PKey::RSA.generate 2048
+          @asymmetric_encryption = AsymmetricEncryption::Local.new
         end
 
         def cluster_token
@@ -23,38 +26,46 @@ module TunMesh
 
         def process_init_session_request(raw_request:, remote_node_id:)
           @logger.debug("Processing session auth update request from #{remote_node_id}")
-          remote_api_client = @api.client_for_node_id(id: remote_node_id)
-          return 404 unless remote_api_client
+          session_auth = session_auth_for_node_id(id: remote_node_id)
+          return 'Failed', 404 unless session_auth
+
+          new_secret = Auth::Token.random_secret
 
           begin
             request = JSON.parse(raw_request)
-
-            auth_id = request.fetch('id')
-            new_secret = rsa_decrypt(cyphertext: Base64.decode64(request.fetch('secret')))
+            remote_public_key = request.fetch('public_key')
           rescue StandardError => exc
             @logger.warn("Invalid session auth update request from #{remote_node_id}: #{exc.class}: #{exc}")
-            return 400
+            return 'Failed', 400
           end
 
-          remote_api_client.session_auth = Token.new(id: auth_id, secret: new_secret)
+          begin
+            remote_asymmetric_encryption = AsymmetricEncryption::Remote.new(public_key: remote_public_key)
+            response_secret = remote_asymmetric_encryption.encrypt(payload: new_secret)
+          rescue StandardError => exc
+            @logger.warn("Failed to encrypt secret with provided public key from #{remote_node_id}: #{exc.class}: #{exc}")
+            @logger.debug(exc.backtrace)
+            return 'Failed', 400
+          end
 
-          @logger.info("Successfully updated session auth for #{remote_node_id} to #{auth_id}")
-          return 204
+          session_auth.inbound_auth = Auth::Token.new(
+            id: SecureRandom.uuid,
+            secret: new_secret
+          )
+
+          @logger.info("Successfully updated inbound session auth for #{remote_node_id} to #{session_auth.inbound_auth.id}")
+          return {
+            id: session_auth.inbound_auth.id,
+            secret: response_secret
+          }
+        rescue StandardError => exc
+          @logger.error("Failed to process session auth update request from #{remote_node_id}: #{exc.class}: #{exc}")
+          @logger.debug(exc.backtrace)
+          return 'Failed', 503
         end
 
-        def remote_node_session_auth(remote_node_id:)
-          remote_client = @api.client_for_node_id(id: remote_node_id)
-          return nil unless remote_client
-
-          return remote_client.session_auth
-        end
-
-        def rsa_decrypt(cyphertext:)
-          return @rsa_private.decrypt(cyphertext)
-        end
-
-        def rsa_public
-          @rsa_private.public_key
+        def session_auth_for_node_id(id:)
+          @api.manager.registrations.node_by_id(id)&.session_auth
         end
       end
     end

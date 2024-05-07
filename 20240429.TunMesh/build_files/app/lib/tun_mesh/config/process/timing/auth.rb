@@ -16,7 +16,10 @@ module TunMesh
               Types::Timing.new(
                 key: 'session_max_age',
                 default: 3600,
-                description_short: 'Maximum number of seconds for a session auth token to be valid'
+                description_short: 'Maximum number of seconds for a session auth token to be valid',
+                description_long: <<~EOF
+                  Actual thresholds will be +/- validity_window for splay and delays.
+                EOF
               )
             )
 
@@ -37,6 +40,7 @@ module TunMesh
                 description_long: <<~EOF
                   Must be long enough for processing, transport, and any acceptable clock drift between nodes in the cluster.
                   Note that this window is only for a single request, auth tokens are not reused.
+                  This should be at least 3x the registration groom_interval to prevent session token age issues.
                 EOF
               )
             )

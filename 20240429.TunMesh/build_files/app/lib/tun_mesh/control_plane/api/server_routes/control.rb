@@ -37,12 +37,13 @@ module TunMesh
           post '/tunmesh/control/v0/packet/rx/:remote_node_id' do |remote_node_id|
             return unless Helpers.ensure_json_content(context: self)
 
-            unless settings.api_auth.remote_node_session_auth(remote_node_id: remote_node_id)
+            session_auth = settings.api_auth.session_auth_for_node_id(id: remote_node_id)
+            unless session_auth
               status 404
             else
               body = request.body.read
               return unless Helpers.ensure_rx_auth(
-                auth: settings.api_auth.remote_node_session_auth(remote_node_id: remote_node_id),
+                auth: session_auth,
                 body: body,
                 context: self
               )
@@ -86,16 +87,17 @@ module TunMesh
           post '/tunmesh/control/v0/registrations/register/:remote_node_id' do |remote_node_id|
             return unless Helpers.ensure_json_content(context: self)
 
-            unless settings.api_auth.remote_node_session_auth(remote_node_id: remote_node_id)
+            session_auth = settings.api_auth.session_auth_for_node_id(id: remote_node_id)
+            unless session_auth
               status 404
             else
               begin
                 body = request.body.read
                 Helpers.ensure_mutual_auth(
-                  auth: settings.api_auth.remote_node_session_auth(remote_node_id: remote_node_id),
+                  auth: session_auth,
                   body: body,
                   context: self
-                ) do |remote_node_id|
+                ) do
                   settings.manager.registrations.process_registration(raw_payload: body, remote_node_id: remote_node_id)
 
                   # Respond with our own info, to allow for a two way sync

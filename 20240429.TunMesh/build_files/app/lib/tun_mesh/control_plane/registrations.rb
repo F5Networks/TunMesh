@@ -161,9 +161,6 @@ module TunMesh
         end
 
         @remote_nodes.ids.each do |id|
-          # Ensure nodes have session auth
-          @remote_nodes.node_by_id(id).api_client.groom_auth
-
           _update_registration(id: id)
         rescue StandardError => exc
           @logger.error("Failed to groom remote node #{id}: exception: #{exc.class}: #{exc}")

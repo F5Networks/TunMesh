@@ -1,6 +1,7 @@
 require 'logger'
 require './lib/tun_mesh/config'
 require './lib/tun_mesh/ipc/packet'
+require_relative '../api/auth/session'
 require_relative '../api/client'
 require_relative '../structs/registration'
 
@@ -78,6 +79,10 @@ module TunMesh
 
         def remotes
           registration.remote
+        end
+
+        def session_auth
+          @session_auth ||= TunMesh::ControlPlane::API::Auth::Session.new(api_client: api_client)
         end
 
         def stale?

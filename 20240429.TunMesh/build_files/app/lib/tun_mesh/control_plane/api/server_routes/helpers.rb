@@ -7,13 +7,20 @@ module TunMesh
             remote_node_id = self.ensure_rx_auth(auth: auth, body: body, context: context)
             return if remote_node_id.nil?
 
-            payload = yield(remote_node_id).to_json
+            raw_payload, code = yield(remote_node_id)
+            code ||= 200
 
-            context.response.headers['Authorization'] = auth.new_http_authorization_header_value(payload: payload, remote_node_id:)
-            context.status(200)
-            # Not using the JSON extension here as the body and auth payload must match
-            context.content_type('application/json')
-            context.body(payload)
+            context.status(code)
+            if code == 200
+              # Not using the JSON extension here as the body and auth payload must match
+              payload = raw_payload.to_json
+
+              context.response.headers['Authorization'] = auth.new_http_authorization_header_value(payload: payload, remote_node_id: remote_node_id)
+              context.content_type('application/json')
+              context.body(payload)
+            else
+              context.body(raw_payload)
+            end
           end
 
           def self.ensure_rx_auth(auth:, body:, context:)

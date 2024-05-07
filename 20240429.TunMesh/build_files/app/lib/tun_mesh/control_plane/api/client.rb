@@ -58,36 +58,47 @@ module TunMesh
             warn_timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
           )
 
-          @session_auth_lock = Mutex.new
           @logger.debug('Initialized')
         end
 
-        def groom_auth
-          if @session_auth_age
-            session_age = Time.now.to_i - @session_auth_age
-            if session_age > TunMesh::CONFIG.values.process.timing.auth.session_max_age
-              @logger.info("Session auth #{session_age}s old: Rotating")
+        # Inits the session auth with the other end
+        # Intended to be called by API::Auth::Session
+        def init_session_token(outbound_auth:)
+          payload = {
+            public_key: @api_auth.asymmetric_encryption.public_key
+          }
 
-              begin
-                _new_session_auth
-              rescue StandardError => exc
-                @logger.error("Failed to rotate session auth: #{exc.class}: #{exc}")
-                @logger.error('Invalidating expired session')
-                @session_auth = nil
-                @session_auth_age = nil
-
-                raise exc
-              end
-            end
+          if outbound_auth.nil?
+            @logger.info { "initializing session auth using the cluster token" }
+            raw_resp = _post_mutual(
+              auth: @api_auth.cluster_token,
+              path: '/tunmesh/auth/v0/init_session',
+              payload: payload,
+              valid_response_codes: [200]
+            )
+          else
+            @logger.info { "initializing session auth using existing session auth #{outbound_auth.id}" }
+            raw_resp = _post_mutual(
+              auth: outbound_auth,
+              path: "/tunmesh/auth/v0/init_session/#{TunMesh::CONFIG.node_id}",
+              payload: payload,
+              valid_response_codes: [200]
+            )
           end
 
-          session_auth
+          decoded_resp = JSON.parse(raw_resp)
+          return Auth::Token.new(
+                   id: decoded_resp.fetch('id'),
+                   secret: @api_auth.asymmetric_encryption.decrypt(ciphertext: decoded_resp.fetch('secret'))
+                 )
+
         end
 
         def register(payload:)
           raise(ArgumentError, "Payload must be a TunMesh::ControlPlane::Structs::Registration, got #{payload.class}") unless payload.is_a? TunMesh::ControlPlane::Structs::Registration
 
-          return _register_bootstrap(payload: payload) unless @session_auth
+          # Key off session auth alone, as if session_auth exists then there is a saved registration
+          return _register_bootstrap(payload: payload) unless session_auth
 
           begin
             return _register_session(payload: payload)
@@ -102,13 +113,7 @@ module TunMesh
             end
           end
 
-          @logger.warn('Resetting session auth due to re-registration failure')
-          @session_auth = nil
           return _register_bootstrap(payload: payload)
-        end
-
-        def remote_pubkey
-          @remote_rsa_pubkey ||= OpenSSL::PKey::RSA.new(_get_unauthed(path: '/tunmesh/auth/v0/rsa_public', expected_content_type: 'text/plain'))
         end
 
         def remote_info
@@ -130,25 +135,20 @@ module TunMesh
         end
 
         def session_auth
-          @session_auth ||= _new_session_auth
-        end
-
-        def session_auth=(new_auth)
-          raise(ArgumentError, "new_auth is not a Auth::Token, got #{new_auth.class}") unless new_auth.is_a? Auth::Token
-
-          @session_auth = new_auth
-          @logger.debug("Updated session auth to #{@session_auth.id} via session_auth=")
+          @session_auth ||= @api_auth.session_auth_for_node_id(id: remote_id)
         end
 
         def transmit_packet(packet:)
           raise(ArgumentError, "Packet must be a TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
 
-          return _post_mutual(
-            auth: session_auth,
-            path: "/tunmesh/control/v0/packet/rx/#{TunMesh::CONFIG.node_id}",
-            payload: packet,
-            valid_response_codes: [204]
-          )
+          session_auth.outbound_auth_wrapper do |auth|
+            return _post_mutual(
+              auth: auth,
+              path: "/tunmesh/control/v0/packet/rx/#{TunMesh::CONFIG.node_id}",
+              payload: packet,
+              valid_response_codes: [204]
+            )
+          end
         end
 
         private
@@ -216,65 +216,14 @@ module TunMesh
         def _register_session(payload:)
           @logger.debug { "Registering to #{remote_id} using the session token" }
 
-          # This doesn't use session auth as, until we're registered on the other side, there is no client object on the remote side to take the token
-          return _post_mutual(
-            auth: session_auth,
-            path: "/tunmesh/control/v0/registrations/register/#{TunMesh::CONFIG.node_id}",
-            payload: payload,
-            valid_response_codes: [200]
-          )
-        end
-
-        def _new_session_auth
-          @logger.debug('Initializing new session auth')
-          new_secret = Auth::Token.random_secret
-          new_token = Auth::Token.new(
-            id: SecureRandom.uuid,
-            secret: new_secret
-          )
-
-          post_kwargs = {
-            payload: {
-              id: new_token.id,
-              secret: Base64.encode64(remote_pubkey.public_encrypt(new_secret))
-            },
-            valid_response_codes: [204]
-          }
-
-          if @session_auth
-            post_kwargs[:auth] = session_auth
-            post_kwargs[:path] = "/tunmesh/auth/v0/init_session/#{TunMesh::CONFIG.node_id}"
-          else
-            post_kwargs[:auth] = @api_auth.cluster_token
-            post_kwargs[:path] = '/tunmesh/auth/v0/init_session'
+          session_auth.outbound_auth_wrapper do |auth|
+            return _post_mutual(
+              auth: auth,
+              path: "/tunmesh/control/v0/registrations/register/#{TunMesh::CONFIG.node_id}",
+              payload: payload,
+              valid_response_codes: [200]
+            )
           end
-
-          @session_auth_lock.synchronize do
-            _post_mutual(**post_kwargs)
-
-            @session_auth_age = Time.now.to_i
-            @session_auth = new_token
-            @logger.debug("New sesson auth initialized successfully to #{session_auth.id}")
-          rescue RequestException => exc
-            raise exc if post_kwargs[:path] != "/tunmesh/auth/v0/init_session/#{TunMesh::CONFIG.node_id}"
-
-            case exc.code.to_s
-            when '404'
-              @logger.warn('Session regeneration returned 404: This node not known to the remote node')
-            when '401'
-              @logger.warn("Session regeneration returned 401: Remote rejected session auth #{session_auth.id}")
-            else
-              raise exc
-            end
-
-            @logger.warn('Retrying session auth sync with cluster credentials')
-            post_kwargs[:auth] = @api_auth.cluster_token
-            post_kwargs[:path] = '/tunmesh/auth/v0/init_session'
-
-            retry
-          end
-
-          return @session_auth
         end
       end
     end

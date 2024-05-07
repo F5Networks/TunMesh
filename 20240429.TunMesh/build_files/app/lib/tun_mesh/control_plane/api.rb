@@ -5,7 +5,7 @@ require_relative 'api/server'
 module TunMesh
   module ControlPlane
     class API
-      attr_reader :auth
+      attr_reader :auth, :manager
 
       def initialize(manager:)
         @auth = Auth.new(api: self)

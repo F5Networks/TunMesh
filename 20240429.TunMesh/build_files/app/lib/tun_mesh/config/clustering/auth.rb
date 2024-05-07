@@ -1,5 +1,6 @@
 require_relative '../group'
 require_relative '../types/string'
+require_relative '../types/uint'
 
 module TunMesh
   class Config
@@ -20,6 +21,15 @@ module TunMesh
                 Shared secret to allow nodes to authenticate as allowed cluster nodes for registering into the cluster.
                 32+ character, random string, unique to this cluster
               EOF
+            )
+          )
+
+          add_field(
+            Types::UInt.new(
+              key: 'pub_key_size',
+              default: 2048,
+              min: 2048,
+              description_short: 'Node public key length',
             )
           )
         end
