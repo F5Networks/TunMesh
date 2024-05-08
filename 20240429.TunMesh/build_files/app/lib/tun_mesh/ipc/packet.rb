@@ -45,7 +45,7 @@ module TunMesh
       end
 
       def self.from_json(raw)
-        payload = JSON.load(raw)
+        payload = JSON.parse(raw)
         raise(PayloadError.new("Version mismatch.  Expected #{VERSION}, got got #{payload['version']}")) unless VERSION == payload.fetch('version')
 
         rv = new
