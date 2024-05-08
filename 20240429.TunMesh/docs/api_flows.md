@@ -13,8 +13,7 @@ General Patterns
 --- A signature of the payload (sig)
 ---- SHA256 of control payloads
 ---- MD5 of data payloads
------ Performance compromise: Reuse of an established signature from earlier in the flow.
------- TODO: Per https://security.stackexchange.com/questions/95696/which-hash-algorithm-takes-longer-time-if-we-compare-between-md5-or-sha256 md5 may be *slower*
+----- Performance compromise: Reuse of an established signature from earlier in the flow, and md5 is faster.
 -- Symmetric keys are used:
 --- For the cluster key both ends need to know the secret as all nodes are equal in the cluster, so no benefit to symmetric signing and a serious configuration penalty (The HMAC secret can be any random string).
 --- Session auth will be relatively high volume signing, so the lower computational overhead of symmetric keys is desirable.
@@ -145,17 +144,14 @@ At this point N can accept session auth requests from E, traffic from E, and wil
 
 ### Attack Vectors
 
-- No protection provided by TLS at this phase
--- The server requires TLS, but does not verify as the CN will not match the dynamic address
---- TODO: Can we improve this?
---- TODO: Open to eavesdropping
-
 #### 1 & 2: tunmesh/control/v0/node_info request
 
 This is a open and unauthenticated request, at a point in the flow where nodes N and E have no established sessions or trust.
-This request is open to attack if an attacker can intercept a bootstrap request.
+This request is protected by the API TLS handshake, which verifies the server cert is trusted.
+The server cert hostname is not verified by default as it is expected that the the URL is dynamic and not in the cert.
 
-An attacker could return a poisoned payload to an attacker controlled listen URL.
+This request is attackable if the attacker can bypass the TLS verification.
+Once past the TLS verification an attacker could return a poisoned payload to an attacker controlled listen URL.
 
 #### 3: Initial Registration
 
@@ -213,6 +209,10 @@ data structures for B         |       causing mutual registration.  The response
 This request is a unsolicited POST to register node A into node B, triggered on a timer.
 This request contains a Registration Payload.
 
+This request is protected by the API TLS.
+A verifies B's cert is trusted.
+A does not verify B's TLS hostname, the session token is used instead to confirm identity.
+
 This request is signed using a pre-negotiated session token.
 If the request fails with a error that A is not known to B then A will fall back to cluster auth, repeating steps 3 and 4 of the initial registration flow.
 
@@ -229,14 +229,15 @@ If this response fails validation then A will retry the flow.
 
 #### 1: A -> B Re-Registration request
 
+This flow is protected by the API TLS certificate.
+To eavesdrop or taint the data an attacker would first need to compromise the TLS session.
+
 This channel is harder to attack than the initial flow as A and B have already established trusted connections and session auth.
 A sends the request direct to the known URL for B, so to redirect the request to a malicious node the registration would need to be pre-poisoned.
 The session token is random, rotated every hour by default, and only exists in memory.
 
 It could be possible for an attacker to force a shift from session auth to cluster auth, but this is logged at the WARN level.
 Shifting from session to cluster does not open any impersonation vectors.
-
-TODO: MITM eavesdropping protection
 
 #### 2: Registration POST response
 
@@ -363,13 +364,17 @@ A `4XX` error may force a session renegotiation but otherwise T takes no action 
 
 #### 1: T -> R packet transmission
 
-This request is protected by the session token which is used both to show that the packet came from T and was not tampered with.
+This request is protected by the API TLS session.
+T verifies R's cert is trusted before sending data.
+The TLS layer provides the eavesdropping protection to protect the packet.
+T does not verify R's TLS certificate hostname, as R's advertised URL is expected to be dynamic and not match the certificate CN.
+T trusts that the URL it has for R is correct, and the TLS certificate check should reject malicious servers.
+
+This Reception on R is protected by the session token which is used both to show that the packet came from T and was not tampered with.
 If an attacker is able to compromise a session token they can inject traffic into the container stack on R.
 
 Routing from the tunnel out of the container stack is not supported.
-Malicious packets not destined for the local tunnel IP will be blocked and logged by G.
-
-TODO: MITM eavesdropping protection
+Malicious packets not destined for the local tunnel IP will be blocked and logged by R.
 
 #### 2: Registration POST response
 
