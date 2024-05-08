@@ -132,15 +132,18 @@ module TunMesh
               # Broadcast to the local broadcast address is not supported, as the tun device is configured with the mesh netmask to get all the traffic for the mesh
               # Sending a local network broadcast address packet to the remote node will appear as a regular unicast dest IP to the receiving kernel
               # This is a implementation limitation.
-              @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str}: Local Broadcast to subnet broadcast address not supported")
+              @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} (Self) -> #{decoded_packet.net_packet.dest_str}: " \
+                           'Local Broadcast to subnet broadcast address not supported')
               @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :unsupported })
               return
             end
 
             @logger.info("Packet #{packet.id}: Broadcast packet to the local subnet")
-            @manager.registrations.nodes_by_proto(proto: decoded_packet.proto).select do |remote_node|
+            proto_nodes = @manager.registrations.nodes_by_proto(proto: decoded_packet.proto)
+            proto_nodes.select! do |remote_node|
               decoded_packet.net_config.node_address_cidr.include?(remote_node.node_addresses[decoded_packet.proto])
-            end.each do |remote_node|
+            end
+            proto_nodes.each do |remote_node|
               _tx_packet(decoded_packet: decoded_packet, packet: packet, remote_node: remote_node)
             end
 
@@ -187,7 +190,8 @@ module TunMesh
           end
         end
 
-        @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str}: Destination #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str} unknown")
+        @logger.warn("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str}: " \
+                     "Destination #{decoded_packet.proto} #{decoded_packet.net_packet.dest_str} unknown")
         @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :no_route })
         return
       end
@@ -250,7 +254,8 @@ module TunMesh
       def _rx_remote_packet_to_tun(decoded_packet:, packet:, source:, source_node_obj:)
         source_id_by_dest_ip = source_node_obj.id
         if source_id_by_dest_ip != source
-          @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: Recieved from #{source} but route to dest is to #{source_id_by_dest_ip}")
+          @logger.error("Dropping packet #{packet.id} from #{decoded_packet.net_packet.source_str} -> #{decoded_packet.net_packet.dest_str} received remote: " \
+                        "Recieved from #{source} but route to dest is to #{source_id_by_dest_ip}")
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :route_conflict })
           return
         end
