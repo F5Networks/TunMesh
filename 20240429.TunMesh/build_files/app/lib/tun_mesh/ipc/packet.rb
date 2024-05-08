@@ -6,6 +6,8 @@ require 'securerandom'
 
 module TunMesh
   class IPC
+    # BinData::Record inheritance changes these behaviors
+    # rubocop:disable Style/TrivialAccessors,Style/RedundantSelf
     class Packet < BinData::Record
       class PayloadError < StandardError
       end
@@ -46,7 +48,7 @@ module TunMesh
 
       def self.from_json(raw)
         payload = JSON.parse(raw)
-        raise(PayloadError.new("Version mismatch.  Expected #{VERSION}, got got #{payload['version']}")) unless VERSION == payload.fetch('version')
+        raise(PayloadError, "Version mismatch.  Expected #{VERSION}, got #{payload['version']}") unless VERSION == payload.fetch('version')
 
         rv = new
         rv.ethertype = payload.fetch('ethertype')
@@ -54,7 +56,7 @@ module TunMesh
         rv.internal_stamp = payload.fetch('internal_stamp')
         rv.source_node_id = payload.fetch('source_node_id')
 
-        raise(PayloadError.new("Checksum mismatch: Expected #{payload[:md5]}, got #{rv.md5}")) unless rv.md5 == payload.fetch('md5')
+        raise(PayloadError, "Checksum mismatch: Expected #{payload[:md5]}, got #{rv.md5}") unless rv.md5 == payload.fetch('md5')
 
         return rv
       rescue StandardError => exc
@@ -104,7 +106,7 @@ module TunMesh
       end
 
       def stamp=(new_stamp)
-        self.internal_stamp = (new_stamp * 2**30).to_i
+        self.internal_stamp = (new_stamp * (2**30)).to_i
       end
 
       def to_h
@@ -138,5 +140,6 @@ module TunMesh
         ].join)
       end
     end
+    # rubocop:enable Style/TrivialAccessors,Style/RedundantSelf
   end
 end

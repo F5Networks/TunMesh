@@ -31,7 +31,7 @@ module TunMesh
     def example_config
       lines = [
         "# Example tun_mesh config, generated #{Time.now}",
-        '---',
+        '---'
       ]
       lines += Config::Top.new.example_config_lines
       return lines.join("\n")

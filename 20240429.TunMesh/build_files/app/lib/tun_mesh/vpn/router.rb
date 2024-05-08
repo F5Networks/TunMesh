@@ -173,8 +173,8 @@ module TunMesh
         if decoded_packet.net_config.network_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
           if decoded_packet.net_config.enable_broadcast
             @logger.info("Packet #{packet.id}: Broadcast packet to the routed subnet")
-            @manager.registrations.nodes_by_proto(proto: decoded_packet.proto).each do |remote_node|
-              _tx_packet(decoded_packet: decoded_packet, packet: packet, remote_node: remote_node)
+            @manager.registrations.nodes_by_proto(proto: decoded_packet.proto).each do |proto_remote_node|
+              _tx_packet(decoded_packet: decoded_packet, packet: packet, remote_node: proto_remote_node)
             end
 
             return
