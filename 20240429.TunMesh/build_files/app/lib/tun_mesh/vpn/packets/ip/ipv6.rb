@@ -4,6 +4,8 @@ module TunMesh
   module VPN
     module Packets
       module IP
+        # BinData::Record inheritance changes these behaviors
+        # rubocop:disable Style/RedundantSelf
         class IPv6 < BinData::Record
           ETHERTYPE = 0x86dd
           PROTO     = :ipv6
@@ -48,6 +50,7 @@ module TunMesh
             return full_str.gsub(/:0+/, ':').gsub(/::+/, '::')
           end
         end
+        # rubocop:enable Style/RedundantSelf
       end
     end
   end

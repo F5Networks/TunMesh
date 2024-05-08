@@ -2,6 +2,8 @@ require 'sysvmq'
 
 module TunMesh
   class IPC
+    # This class is mirroring Ruby core Queue
+    # rubocop: disable Style,Naming
     class Queue
       def initialize(queue_id:, buffer_size: 2048, create: false, mode: 0o0660)
         flags = mode
@@ -42,5 +44,6 @@ module TunMesh
         @mq.send(payload)
       end
     end
+    # rubocop: enable Style,Naming
   end
 end

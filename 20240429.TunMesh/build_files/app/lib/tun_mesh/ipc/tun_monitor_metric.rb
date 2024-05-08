@@ -6,6 +6,8 @@ require 'securerandom'
 
 module TunMesh
   class IPC
+    # BinData::Record inheritance changes these behaviors
+    # rubocop:disable Style/RedundantSelf
     class TunMonitorMetric < BinData::Record
       endian :big
 
@@ -22,5 +24,6 @@ module TunMesh
         self.to_binary_s
       end
     end
+    # rubocop:enable Style/RedundantSelf
   end
 end
