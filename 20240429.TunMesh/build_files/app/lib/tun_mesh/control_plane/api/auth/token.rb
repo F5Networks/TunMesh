@@ -1,9 +1,9 @@
 require 'digest'
 require 'jwt'
-require 'logger'
 require 'securerandom'
-require './lib/tun_mesh/ipc/packet'
 require './lib/tun_mesh/config'
+require './lib/tun_mesh/ipc/packet'
+require './lib/tun_mesh/logger'
 
 require_relative 'errors'
 
@@ -25,7 +25,7 @@ module TunMesh
           def initialize(id:, secret:)
             @stamp = Time.now.to_f
             @id = id
-            @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{id})")
+            @logger = TunMesh::Logger.new(id: "#{self.class}(#{id})")
             @secret = secret
           end
 

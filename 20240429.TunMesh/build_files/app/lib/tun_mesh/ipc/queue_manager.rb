@@ -1,5 +1,5 @@
-require 'logger'
 require './lib/tun_mesh/config'
+require './lib/tun_mesh/logger'
 require_relative 'queue'
 
 module TunMesh
@@ -35,7 +35,7 @@ module TunMesh
           @queue_key = queue_key
         end
 
-        logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+        logger = TunMesh::Logger.new(id: self.class.to_s)
 
         retries = 0
         begin

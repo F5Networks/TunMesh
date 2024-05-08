@@ -1,8 +1,8 @@
 require 'base64'
 require 'json'
-require 'logger'
 
 require './lib/tun_mesh/config'
+require './lib/tun_mesh/logger'
 require_relative 'auth/token'
 require_relative 'auth/asymmetric_encryption/local'
 require_relative 'auth/asymmetric_encryption/remote'
@@ -14,7 +14,7 @@ module TunMesh
         attr_reader :asymmetric_encryption
 
         def initialize(api:)
-          @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+          @logger = TunMesh::Logger.new(id: self.class.to_s)
           @api = api
 
           @asymmetric_encryption = AsymmetricEncryption::Local.new

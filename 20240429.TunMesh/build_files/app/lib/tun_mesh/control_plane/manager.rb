@@ -1,8 +1,7 @@
-require 'logger'
 require 'pathname'
 require 'securerandom'
 
-require './lib/tun_mesh/config'
+require './lib/tun_mesh/logger'
 require './lib/tun_mesh/vpn/router'
 require_relative 'api'
 require_relative 'monitoring'
@@ -16,7 +15,7 @@ module TunMesh
       attr_reader :api_auth, :monitors, :registrations, :router
 
       def initialize(queue_key:)
-        @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+        @logger = TunMesh::Logger.new(id: self.class.to_s)
 
         @queue_manager = TunMesh::IPC::QueueManager.new(queue_key: queue_key)
         @registrations = Registrations.new(manager: self)

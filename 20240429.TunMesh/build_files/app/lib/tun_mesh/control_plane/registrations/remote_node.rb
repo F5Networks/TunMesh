@@ -1,5 +1,5 @@
-require 'logger'
 require './lib/tun_mesh/config'
+require './lib/tun_mesh/logger'
 require './lib/tun_mesh/ipc/packet'
 require_relative '../api/auth/session'
 require_relative '../api/client'
@@ -16,7 +16,7 @@ module TunMesh
           @api_client = api_client
           update_registration(registration)
 
-          @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{id})")
+          @logger = TunMesh::Logger.new(id: "#{self.class}(#{id})")
 
           @transmit_queue = Queue.new
         end

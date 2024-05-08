@@ -1,5 +1,5 @@
-require 'logger'
 require './lib/tun_mesh/config'
+require './lib/tun_mesh/logger'
 require './lib/tun_mesh/ipc/packet'
 require './lib/tun_mesh/ipc/queue_manager'
 require_relative 'ethertypes'
@@ -12,7 +12,7 @@ module TunMesh
       DECODED_PACKET = Struct.new(:net_config, :net_packet, :proto)
 
       def initialize(manager:, queue_manager:)
-        @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+        @logger = TunMesh::Logger.new(id: self.class.to_s)
         @manager = manager
         @queue_manager = queue_manager
         @last_tun_heartbeat = 0

@@ -1,10 +1,10 @@
 require 'base64'
-require 'logger'
 require 'httparty'
 require 'openssl'
 require 'pathname'
 require 'persistent_http'
 require './lib/tun_mesh/config'
+require './lib/tun_mesh/logger'
 require_relative '../structs/registration'
 require_relative '../../ipc/packet'
 
@@ -32,7 +32,7 @@ module TunMesh
 
           remote_info_resp = remote_info
           @remote_id = remote_info_resp['id']
-          @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{@remote_id}@#{remote_url})")
+          @logger = TunMesh::Logger.new(id: "#{self.class}(#{@remote_id}@#{remote_url})")
 
           if remote_info_resp['listen_url'] != @remote_url
             # This is a handler for bootstrapping via load balanced URLs
@@ -41,7 +41,7 @@ module TunMesh
             # This is normal on startup, but not post bootstrap and only if configured with non-sticky load balancers in the bootstrap URL list.
             @logger.warn("Updating remote_url from #{@remote_url} to #{remote_info_resp['listen_url']}")
             @remote_url = remote_info_resp['listen_url']
-            @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: "#{self.class}(#{@remote_id}@#{@remote_url})")
+            @logger = TunMesh::Logger.new(id: "#{self.class}(#{@remote_id}@#{@remote_url})")
           end
 
           @persistent_http = PersistentHTTP.new(

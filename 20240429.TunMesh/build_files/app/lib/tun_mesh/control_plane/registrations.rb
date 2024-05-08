@@ -1,4 +1,5 @@
 require './lib/tun_mesh/config'
+require './lib/tun_mesh/logger'
 require_relative 'structs/node_info'
 require_relative 'structs/registration'
 require_relative 'registrations/errors'
@@ -9,7 +10,7 @@ module TunMesh
   module ControlPlane
     class Registrations
       def initialize(manager:)
-        @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+        @logger = TunMesh::Logger.new(id: self.class.to_s)
         @manager = manager
 
         @remote_nodes = RemoteNodePool.new(manager: @manager)

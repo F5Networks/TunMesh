@@ -1,10 +1,12 @@
+require './lib/tun_mesh/logger'
+
 module TunMesh
   module ControlPlane
     class API
       module ServerRoutes
         module Helpers
           def self.logger
-            @logger ||= Logger.new($stderr, progname: self.class.to_s)
+            @logger ||= TunMesh::Logger.new(id: self.class.to_s)
           end
 
           def self.ensure_mutual_auth(auth:, body:, context:)

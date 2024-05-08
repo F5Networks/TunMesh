@@ -1,4 +1,4 @@
-require 'logger'
+require './lib/tun_mesh/logger'
 require_relative 'remote_node'
 
 module TunMesh
@@ -8,7 +8,7 @@ module TunMesh
         attr_reader :node_ids_by_address
 
         def initialize(manager:)
-          @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+          @logger = TunMesh::Logger.new(id: self.class.to_s)
           @manager = manager
           @nodes = {}
 

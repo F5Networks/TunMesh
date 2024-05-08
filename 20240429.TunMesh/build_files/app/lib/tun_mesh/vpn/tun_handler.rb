@@ -1,7 +1,7 @@
-require 'logger'
 require 'rb_tuntap'
 
 require './lib/tun_mesh/config'
+require './lib/tun_mesh/logger'
 require './lib/tun_mesh/control_plane/structs/net_address'
 require './lib/tun_mesh/ipc/packet'
 require './lib/tun_mesh/ipc/tun_monitor_metric'
@@ -11,7 +11,7 @@ module TunMesh
   module VPN
     class TunHandler
       def initialize(queue_key:)
-        @logger = Logger.new($stderr, level: TunMesh::CONFIG.values.logging.level, progname: self.class.to_s)
+        @logger = TunMesh::Logger.new(id: self.class.to_s)
         @queue_manager = TunMesh::IPC::QueueManager.new(queue_key: queue_key)
       end
 

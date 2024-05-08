@@ -1,7 +1,7 @@
-require 'logger'
 require './lib/tun_mesh/concurrent_lock'
 require './lib/tun_mesh/config'
 require './lib/tun_mesh/control_plane/api/client'
+require './lib/tun_mesh/logger'
 require_relative 'errors'
 require_relative 'token'
 require_relative 'session/split_token'
@@ -15,7 +15,7 @@ module TunMesh
 
           def initialize(api_client:, id:)
             @id = id
-            @logger = Logger.new($stderr, progname: "#{self.class}(#{id})")
+            @logger = TunMesh::Logger.new(id: "#{self.class}(#{id})")
             @api_client = api_client
             @outbound_lock = TunMesh::ConcurrentLock.new
           end
