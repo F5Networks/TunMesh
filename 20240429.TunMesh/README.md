@@ -29,7 +29,7 @@ The deployment requirements are:
   - NAT friendly
 - Must be able to set the listening Tun Mesh IP address and port number in the Tun mesh config file.
 - The container must be started with `cap_net_admin` and `cap_net_raw` to configure the network settings.
-  - Privileges are dropped internally after enabling the tunnel.
+  - The UID is changed from root to a non-root user internally after enabling the tunnel to limit network admin access scope.
   - See [docs/security.md](docs/security.md) for more details on the security model.
 - The container must have access to the `/dev/net/tun` device on the host.
   - This is required to create the tunnel device in the container, the tunnel is added to the container network namespace not on the host.
