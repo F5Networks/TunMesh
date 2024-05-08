@@ -1,9 +1,13 @@
+require 'securerandom'
+require './lib/tun_mesh/logger'
+
 module TunMesh
   # This class implements a lock which can both be exclusively and concurrently locked
   # Exclusive locks behave like a normal Mutex
   # Concurrent locks will block exclusive locks
   class ConcurrentLock
-    def initialize
+    def initialize(id: SecureRandom.uuid)
+      @logger = TunMesh::Logger.new(id: "#{self.class}(#{id})")
       @exclusive_lock = Mutex.new
       @concurrent_locks = {}
     end
@@ -46,23 +50,31 @@ module TunMesh
       rv = nil
 
       @exclusive_lock.synchronize do
+        @logger.debug { 'Exclusive lock acquired' }
         until @concurrent_locks.empty?
-          @concurrent_locks.delete_if do |_, lock|
+          @concurrent_locks.delete_if do |block_id, lock|
             lock.synchronize do
+              @logger.debug { "Blocking on #{block_id}" }
               true
             end
           end
         end
 
+        @logger.debug { 'Blocks released, yielding' }
+
         rv = yield
+
+      ensure
+        if self_concurrent_lock
+          self_concurrent_lock.lock
+          @concurrent_locks[Thread.current] = self_concurrent_lock
+          @logger.debug { 'Re-acquired block' }
+        end
+
+        @logger.debug { 'Releasing' }
       end
 
       return rv
-    ensure
-      if self_concurrent_lock
-        self_concurrent_lock.lock
-        @concurrent_locks[Thread.current] = self_concurrent_lock
-      end
     end
 
     # try_lock is not available due to the block pattern and supporting locking within blocking.
