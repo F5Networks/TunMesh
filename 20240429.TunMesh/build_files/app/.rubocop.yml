@@ -36,6 +36,11 @@ Style/NumericLiterals:
 Style/RedundantArgument:
   Enabled: false
 
+# I don't trust this without a test suite
+# TODO: Re-enable when there is full test coverage
+Style/RedundantBegin:
+  Enabled: false
+  
 # Favor explicit over implicit code: don't complain of "redundant returns"
 Style/RedundantReturn:
   Enabled: false

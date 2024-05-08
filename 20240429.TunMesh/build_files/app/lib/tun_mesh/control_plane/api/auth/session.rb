@@ -17,18 +17,20 @@ module TunMesh
             @id = id
             @logger = TunMesh::Logger.new(id: "#{self.class}(#{id})")
             @api_client = api_client
-            @outbound_lock = TunMesh::ConcurrentLock.new
+            @outbound_lock = TunMesh::ConcurrentLock.new(id: "#{self.class}(#{id})")
           end
 
           def auth_wrapper
             @outbound_lock.block do
-              return yield(token)
-            rescue TunMesh::ControlPlane::API::Client::RequestException => exc
-              if exc.code.to_i >= 400 && exc.code.to_i < 500
-                @logger.warn("Outbound auth operation returned #{exc.code}: Invalidating session #{@outbound_auth&.id}")
-                _invalidate_outbound!(id: @outbound_auth&.id)
+              begin
+                return yield(token)
+              rescue TunMesh::ControlPlane::API::Client::RequestException => exc
+                if exc.code.to_i >= 400 && exc.code.to_i < 500
+                  @logger.warn("Outbound auth operation returned #{exc.code}: Invalidating session #{@outbound_auth&.id}")
+                  _invalidate_outbound!(id: @outbound_auth&.id)
+                end
+                raise exc
               end
-              raise exc
             end
           end
 
@@ -48,8 +50,14 @@ module TunMesh
             @logger.debug("Updated inbound session auth to #{@inbound_auth.id}")
           end
 
+          def outbound_auth
+            return @outbound_auth unless _outbound_expired?
+
+            @outbound_lock.synchronize { _init_outbound }
+          end
+
           def token
-            return Session::SplitToken.new(session: self, outbound_auth: @outbound_lock.synchronize { _outbound_auth })
+            return Session::SplitToken.new(session: self, outbound_auth: outbound_auth)
           end
 
           # Dedicated method for cases where the blocking token can deadlock, namely the auth endpoints
@@ -76,10 +84,14 @@ module TunMesh
           private
 
           def _inbound_expired?
+            return true unless @inbound_auth
+
             @inbound_auth&.age.to_i > _inbound_expiration_threshold
           end
 
           def _outbound_expired?
+            return true unless @outbound_auth
+
             @outbound_auth&.age.to_i > _outbound_expiration_threshold
           end
 
@@ -87,25 +99,7 @@ module TunMesh
             @inbound_expiration_threshold ||= (TunMesh::CONFIG.values.process.timing.auth.session_max_age + TunMesh::CONFIG.values.process.timing.auth.validity_window)
           end
 
-          def _invalidate_outbound!(id:)
-            @outbound_lock.synchronize do
-              return unless @outbound_auth
-
-              if id.nil?
-                @logger.debug('Ignoring invalidate_outbound! request for nil ID')
-                return
-              end
-
-              if id == @outbound_auth.id
-                @logger.debug("Invalidating outbound_auth #{id}")
-                @outbound_auth = nil
-              else
-                @logger.debug("Ignoring invalidate_outbound! request for #{id}, current outbound ID #{@outbound_auth&.id}")
-              end
-            end
-          end
-
-          def _outbound_auth
+          def _init_outbound
             if @outbound_auth && _outbound_expired?
               begin
                 @logger.info("Rotating outbound auth: #{@outbound_auth.age}s old")
@@ -131,6 +125,24 @@ module TunMesh
             end
 
             return @outbound_auth
+          end
+
+          def _invalidate_outbound!(id:)
+            @outbound_lock.synchronize do
+              return unless @outbound_auth
+
+              if id.nil?
+                @logger.debug('Ignoring invalidate_outbound! request for nil ID')
+                return
+              end
+
+              if id == @outbound_auth.id
+                @logger.debug("Invalidating outbound_auth #{id}")
+                @outbound_auth = nil
+              else
+                @logger.debug("Ignoring invalidate_outbound! request for #{id}, current outbound ID #{@outbound_auth&.id}")
+              end
+            end
           end
 
           def _outbound_expiration_threshold
