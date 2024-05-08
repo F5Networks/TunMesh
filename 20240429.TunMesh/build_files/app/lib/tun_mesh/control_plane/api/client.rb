@@ -105,8 +105,6 @@ module TunMesh
             case exc.code.to_s
             when '404'
               @logger.warn('Re-registration returned 404: This node not known to the remote node')
-            when '401'
-              @logger.warn('Re-registration returned 401: Remote rejected session auth')
             else
               raise exc
             end

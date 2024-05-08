@@ -15,7 +15,7 @@ module TunMesh
               # Not using the JSON extension here as the body and auth payload must match
               payload = raw_payload.to_json
 
-              context.response.headers['Authorization'] = auth.new_http_authorization_header_value(payload: payload, remote_node_id: remote_node_id)
+              context.response.headers['Authorization'] = auth.new_http_authorization_header_value(payload: payload, remote_node_id: remote_node_id, for_response: true)
               context.content_type('application/json')
               context.body(payload)
             else

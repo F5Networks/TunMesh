@@ -50,7 +50,19 @@ module TunMesh
             end
           end
 
-          def outbound_auth
+          def outbound_auth(for_response: false, **)
+            # Return @outbound_auth directly if this is for a mutual auth response and @outbound_auth exists.
+            # This path is to prevent a deadlock where:
+            # - R requests a session from G using the session token
+            # - G goes to sign the response with its session token, but it is past the refresh threshold
+            # - G requests a new session from R using its session token
+            # - R goes to sign the response with its session token, but it is locked as the initial request has not yet completed
+            # - The nodes are deadlocked until the requests time out
+            # This is only a risk on session rotations.
+            # Returning @outbound_auth directly relies on the validity_window splay being several times larger than the reregistration window
+            #   to cause the sessions to rotate outbound several cycles before they will be rejected inbound.
+            return @outbound_auth if for_response && @outbound_auth
+
             @outbound_lock.synchronize { _outbound_auth }
           end
 
@@ -70,11 +82,11 @@ module TunMesh
           # Shims to behave like Auth::Token
           #
           def new_http_authorization_header_value(**kwargs)
-            outbound_auth.new_http_authorization_header_value(**kwargs)
+            outbound_auth(**kwargs).new_http_authorization_header_value(**kwargs)
           end
 
           def new_token(**kwargs)
-            outbound_auth.new_token(**kwargs)
+            outbound_auth(**kwargs).new_token(**kwargs)
           end
 
           def verify(**kwargs)
@@ -103,7 +115,7 @@ module TunMesh
             if @outbound_auth && _outbound_expired?
               begin
                 @logger.info("Rotating outbound auth: #{@outbound_auth.age}s old")
-                @outbound_auth ||= @api_client.init_session_token(outbound_auth: @outbound_auth)
+                @outbound_auth = @api_client.init_session_token(outbound_auth: @outbound_auth)
                 @logger.info("Rotated outbound session auth to #{@outbound_auth.id}")
               rescue StandardError => exc
                 @logger.error("Failed to rotate outbound auth: #{exc.class}: #{exc}")

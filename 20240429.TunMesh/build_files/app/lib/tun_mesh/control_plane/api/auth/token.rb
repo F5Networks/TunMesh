@@ -37,7 +37,7 @@ module TunMesh
             "Bearer: #{new_token(**kwargs)}"
           end
 
-          def new_token(payload:, remote_node_id:)
+          def new_token(payload:, remote_node_id:, **)
             iat = Time.now.to_i
             return JWT.encode(
               {
