@@ -27,13 +27,6 @@ module TunMesh
                  })
           end
 
-          # Deprecated, /tunmesh/control/v0/node_info is now used.
-          # Kept for 0.4 -> 0.5 compatibility (One way, 0.5 registering to 0.4 will fail.)
-          # Same auth semantics as /tunmesh/control/v0/node_info
-          get '/tunmesh/control/v0/node_info/id' do
-            json({ id: TunMesh::CONFIG.node_id })
-          end
-
           post '/tunmesh/control/v0/packet/rx/:remote_node_id' do |remote_node_id|
             return unless Helpers.ensure_json_content(context: self)
 
