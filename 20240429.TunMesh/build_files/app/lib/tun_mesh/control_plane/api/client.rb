@@ -1,5 +1,4 @@
 require 'base64'
-require 'httparty'
 require 'openssl'
 require 'pathname'
 require 'persistent_http'
@@ -27,6 +26,9 @@ module TunMesh
           raise(ArgumentError, 'Missing api_auth') if api_auth.nil?
           raise(ArgumentError, 'Missing remote_url') if remote_url.nil?
 
+          # Early logger for remote_info GET
+          @logger = TunMesh::Logger.new(id: "#{self.class}(#{remote_url})")
+
           @api_auth = api_auth
           @remote_url = remote_url.to_s
 
@@ -44,20 +46,7 @@ module TunMesh
             @logger = TunMesh::Logger.new(id: "#{self.class}(#{@remote_id}@#{@remote_url})")
           end
 
-          @persistent_http = PersistentHTTP.new(
-            name: "#{self.class}(#{@remote_url})",
-            logger: @logger,
-            url: @remote_url,
-
-            force_retry: true,
-            pool_size: 3, # Only expected to be accessed by the Registrations::RemoteNode worker and the Registrations worker
-            pool_timeout: 5,
-
-            open_timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
-            read_timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
-            warn_timeout: TunMesh::CONFIG.values.process.timing.request_timeout
-          )
-
+          _init_persistent_http
           @logger.debug('Initialized')
         end
 
@@ -115,20 +104,13 @@ module TunMesh
 
         def remote_info
           url = Pathname.new(@remote_url).join('tunmesh/control/v0/node_info')
-          begin
-            # Don't use @persistent_http or @logger as they're not initialized yet
-            # We need the ID to init the logger to init persistent_http
-            resp = HTTParty.get(url.to_s,
-                                timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
-                                verify: false)
 
-            raise(RequestException.new("HTTP #{resp.code}", resp.code)) if resp.code != 200
-            raise(RequestException.new('Invalid response', resp.code)) unless resp['id']
+          _init_persistent_http(non_persistent: true) unless @persistent_http
+          decoded_resp = JSON.parse(_get_unauthed(path: url.to_s))
+          raise(RequestException.new('Invalid response: Missing id', resp.code)) unless decoded_resp['id']
+          raise(RequestException.new('Invalid response: Missing listen_url', resp.code)) unless decoded_resp['listen_url']
 
-            return resp.to_h
-          rescue StandardError => exc
-            raise(exc, "Failed to perform node info GET to #{url}: #{exc}")
-          end
+          return decoded_resp
         end
 
         def auth_session
@@ -160,6 +142,35 @@ module TunMesh
           raise(RequestException.new("HTTP GET to #{path} returned content type #{resp.content_type}", resp.code)) unless resp.content_type == expected_content_type
 
           resp.body
+        end
+
+        def _init_persistent_http(**kwargs)
+          ca_file_path = TunMesh::CONFIG.values.control_api.ssl.ca_file_path
+          ca_file_path = TunMesh::CONFIG.values.control_api.ssl.cert_file_path unless ca_file_path&.file?
+
+          common_args = {
+            name: "#{self.class}(#{@remote_url})",
+            url: @remote_url,
+
+            force_retry: true,
+            pool_size: 3, # Only expected to be accessed by the Registrations::RemoteNode worker and the Registrations worker
+            pool_timeout: 5,
+
+            verify_mode: OpenSSL::SSL::VERIFY_PEER,
+            # verify_hostname requires https://github.com/bpardee/persistent_http/pull/10
+            verify_hostname: TunMesh::CONFIG.values.control_api.ssl.verify_hostname,
+            ca_file: ca_file_path.to_s,
+
+            open_timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
+            read_timeout: TunMesh::CONFIG.values.process.timing.request_timeout,
+            warn_timeout: TunMesh::CONFIG.values.process.timing.request_timeout
+          }
+
+          common_args[:logger] = @logger if @logger
+          full_args = common_args.merge(kwargs)
+          @logger.debug("Initializing PersistentHTTP with args #{full_args}")
+
+          @persistent_http = PersistentHTTP.new(**full_args)
         end
 
         def _post_mutual(auth:, path:, payload:, valid_response_codes:)

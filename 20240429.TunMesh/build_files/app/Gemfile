@@ -8,8 +8,7 @@ gem 'ipaddr', '~> 1.2.5'
 
 gem 'sysvmq', '~> 0.2'
 
-gem 'httparty', '~> 0.19'
-gem 'persistent_http', '~> 2.0'
+gem 'persistent_http', '~> 2.0', git: 'https://github.com/ag-TJNII/persistent_http.git', branch: 'TJNII-ssl_verify'
 
 # Prometheus/API dependencies
 gem 'prometheus-client', '~> 4.0'

@@ -4,6 +4,14 @@ module TunMesh
   class Config
     module Types
       class File < Base
+        attr_reader :required
+
+        def initialize(**kwargs)
+          super
+
+          @required = kwargs.fetch(:required, default.nil?)
+        end
+
         def description_type
           'file path'
         end
