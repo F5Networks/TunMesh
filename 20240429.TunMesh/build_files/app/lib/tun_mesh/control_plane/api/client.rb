@@ -69,7 +69,7 @@ module TunMesh
           }
 
           if outbound_auth.nil?
-            @logger.info { "initializing session auth using the cluster token" }
+            @logger.info { 'initializing session auth using the cluster token' }
             raw_resp = _post_mutual(
               auth: @api_auth.cluster_token,
               path: '/tunmesh/auth/v0/init_session',

@@ -47,7 +47,7 @@ module TunMesh
                 exp: (iat + TunMesh::CONFIG.values.process.timing.auth.validity_window),
                 aud: remote_node_id,
                 sig: _payload_sig(payload: payload),
-                sub: @id,
+                sub: @id
               },
               @secret,
               JWT_ALGORITHM

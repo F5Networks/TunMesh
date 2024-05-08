@@ -38,9 +38,7 @@ module TunMesh
             return unless Helpers.ensure_json_content(context: self)
 
             session_auth = settings.api_auth.session_auth_for_node_id(id: remote_node_id)
-            unless session_auth
-              status 404
-            else
+            if session_auth
               body = request.body.read
               return unless Helpers.ensure_rx_auth(
                 auth: session_auth,
@@ -50,6 +48,8 @@ module TunMesh
 
               settings.manager.receive_packet(packet_json: body, source: remote_node_id)
               status 204
+            else
+              status 404
             end
           end
 
@@ -88,9 +88,7 @@ module TunMesh
             return unless Helpers.ensure_json_content(context: self)
 
             session_auth = settings.api_auth.session_auth_for_node_id(id: remote_node_id)
-            unless session_auth
-              status 404
-            else
+            if session_auth
               begin
                 body = request.body.read
                 Helpers.ensure_mutual_auth(
@@ -110,6 +108,8 @@ module TunMesh
                 status 400
                 body 'Failed'
               end
+            else
+              status 404
             end
           end
         end

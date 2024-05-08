@@ -70,7 +70,7 @@ module TunMesh
       def health
         {
           registered: _registered_health,
-          worker: worker.alive?,
+          worker: worker.alive?
         }
       end
 
@@ -203,7 +203,7 @@ module TunMesh
           return true
         end
 
-        @logger.warn("Startup grace: Expired while unhealthy")
+        @logger.warn('Startup grace: Expired while unhealthy')
         @startup_grace_threshold = :expired
         return false
       end

@@ -66,7 +66,7 @@ module TunMesh
           id: :remote_tx_packets_by_source_node,
           docstring: 'TunMesh: Packets sent to other nodes by source node',
           labels: {
-            source_node_id: nil,
+            source_node_id: nil
           },
           ttl: TunMesh::CONFIG.values.monitoring.metric_ttl
         )
@@ -75,7 +75,7 @@ module TunMesh
           id: :tun_packet_latency_by_source_node,
           docstring: 'TunMesh: Packet latency by source node',
           labels: {
-            source_node_id: nil,
+            source_node_id: nil
           },
           ttl: TunMesh::CONFIG.values.monitoring.metric_ttl
         )

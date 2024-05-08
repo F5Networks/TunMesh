@@ -4,7 +4,7 @@ module TunMesh
       module ServerRoutes
         module Helpers
           def self.ensure_mutual_auth(auth:, body:, context:)
-            remote_node_id = self.ensure_rx_auth(auth: auth, body: body, context: context)
+            remote_node_id = ensure_rx_auth(auth: auth, body: body, context: context)
             return if remote_node_id.nil?
 
             raw_payload, code = yield(remote_node_id)
@@ -35,7 +35,7 @@ module TunMesh
           rescue StandardError => exc
             context.status 401
             context.content_type 'text/plain'
-            context.body "Unauthorized"
+            context.body 'Unauthorized'
 
             return nil
           end

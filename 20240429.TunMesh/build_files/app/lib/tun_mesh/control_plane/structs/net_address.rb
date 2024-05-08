@@ -16,7 +16,7 @@ module TunMesh
         FIELDS = {
           cidr: {
             type: String
-          },
+          }
         }
 
         def self.parse_cidr(cidr)
@@ -60,7 +60,7 @@ module TunMesh
 
           # Take the network address as an integer, and OR it with the last address in the subnet
           # Calculate the last address via mask bit math
-          @network_broadcast_address_int ||= (_network_address_obj.to_i | (2**(32 - prefix) - 1))
+          @network_broadcast_address_int ||= (_network_address_obj.to_i | ((2**(32 - prefix)) - 1))
           return true if other_address_obj.to_i == @network_broadcast_address_int
 
           return false
