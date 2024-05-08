@@ -29,11 +29,11 @@ module TunMesh
           post '/tunmesh/auth/v0/init_session/:remote_node_id' do |remote_node_id|
             return unless Helpers.ensure_json_content(context: self)
 
-            session_auth = settings.api_auth.session_auth_for_node_id(id: remote_node_id)
-            if session_auth
+            auth_session = settings.api_auth.auth_session_for_node_id(id: remote_node_id)
+            if auth_session
               req_body = request.body.read
               Helpers.ensure_mutual_auth(
-                auth: session_auth,
+                auth: auth_session.unblocked_token,
                 body: req_body,
                 context: self
               ) do

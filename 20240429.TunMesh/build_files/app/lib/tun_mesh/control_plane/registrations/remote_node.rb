@@ -21,6 +21,10 @@ module TunMesh
           @transmit_queue = Queue.new
         end
 
+        def auth_session
+          @auth_session ||= TunMesh::ControlPlane::API::Auth::Session.new(api_client: api_client, id: id)
+        end
+
         def close
           unless @transmit_queue.closed?
             @transmit_queue.close
@@ -80,10 +84,6 @@ module TunMesh
 
         def remotes
           registration.remote
-        end
-
-        def session_auth
-          @session_auth ||= TunMesh::ControlPlane::API::Auth::Session.new(api_client: api_client)
         end
 
         def stale?

@@ -37,19 +37,22 @@ module TunMesh
           post '/tunmesh/control/v0/packet/rx/:remote_node_id' do |remote_node_id|
             return unless Helpers.ensure_json_content(context: self)
 
-            session_auth = settings.api_auth.session_auth_for_node_id(id: remote_node_id)
-            if session_auth
-              body = request.body.read
-              return unless Helpers.ensure_rx_auth(
-                auth: session_auth,
+            auth_session = settings.api_auth.auth_session_for_node_id(id: remote_node_id)
+            unless auth_session
+              status 404
+              return
+            end
+
+            body = request.body.read
+            auth_session.auth_wrapper do |session_auth_token|
+              if Helpers.ensure_rx_auth(
+                auth: session_auth_token,
                 body: body,
                 context: self
               )
-
-              settings.manager.receive_packet(packet_json: body, source: remote_node_id)
-              status 204
-            else
-              status 404
+                settings.manager.receive_packet(packet_json: body, source: remote_node_id)
+                status 204
+              end
             end
           end
 
@@ -87,12 +90,17 @@ module TunMesh
           post '/tunmesh/control/v0/registrations/register/:remote_node_id' do |remote_node_id|
             return unless Helpers.ensure_json_content(context: self)
 
-            session_auth = settings.api_auth.session_auth_for_node_id(id: remote_node_id)
-            if session_auth
-              begin
-                body = request.body.read
+            auth_session = settings.api_auth.auth_session_for_node_id(id: remote_node_id)
+            unless auth_session
+              status 404
+              return
+            end
+
+            begin
+              body = request.body.read
+              auth_session.auth_wrapper do |session_auth_token|
                 Helpers.ensure_mutual_auth(
-                  auth: session_auth,
+                  auth: session_auth_token,
                   body: body,
                   context: self
                 ) do
@@ -101,15 +109,13 @@ module TunMesh
                   # Respond with our own info, to allow for a two way sync
                   settings.manager.registrations.outbound_registration_payload
                 end
-              rescue TunMesh::ControlPlane::Registrations::RegistrationFromSelf
-                status 421
-                body 'Registration to self'
-              rescue TunMesh::ControlPlane::Registrations::RegistrationFailed
-                status 400
-                body 'Failed'
               end
-            else
-              status 404
+            rescue TunMesh::ControlPlane::Registrations::RegistrationFromSelf
+              status 421
+              body 'Registration to self'
+            rescue TunMesh::ControlPlane::Registrations::RegistrationFailed
+              status 400
+              body 'Failed'
             end
           end
         end

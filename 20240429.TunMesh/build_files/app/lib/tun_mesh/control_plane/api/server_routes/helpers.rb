@@ -3,12 +3,18 @@ module TunMesh
     class API
       module ServerRoutes
         module Helpers
+          def self.logger
+            @logger ||= Logger.new($stderr, progname: self.class.to_s)
+          end
+
           def self.ensure_mutual_auth(auth:, body:, context:)
             remote_node_id = ensure_rx_auth(auth: auth, body: body, context: context)
             return if remote_node_id.nil?
 
             raw_payload, code = yield(remote_node_id)
             code ||= 200
+
+            logger.debug { "ensure_mutual_auth(#{context.request.path}): Finalizing with code #{code}" }
 
             context.status(code)
             if code == 200
@@ -21,6 +27,10 @@ module TunMesh
             else
               context.body(raw_payload)
             end
+          rescue StandardError => exc
+            logger.warn("Exception in ensure_mutual_auth(#{context.request.path}): #{exc.class}: #{exc}")
+            logger.debug { exc.backtrace }
+            raise exc
           end
 
           def self.ensure_rx_auth(auth:, body:, context:)
@@ -32,7 +42,10 @@ module TunMesh
             )
 
             return remote_node_id
-          rescue StandardError
+          rescue StandardError => exc
+            logger.warn("ensure_rx_auth(#{context.request.path}) failed: #{exc.class}: #{exc}")
+            logger.debug { exc.backtrace }
+
             context.status 401
             context.content_type 'text/plain'
             context.body 'Unauthorized'
@@ -42,6 +55,8 @@ module TunMesh
 
           def self.ensure_json_content(context:)
             return true if context.env['CONTENT_TYPE'] == 'application/json'
+
+            logger.warn("ensure_json_content(#{context.request.path}) failed: #{context.env['CONTENT_TYPE']}")
 
             context.status 400
             context.content_type 'text/plain'

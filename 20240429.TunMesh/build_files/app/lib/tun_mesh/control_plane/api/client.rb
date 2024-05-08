@@ -63,12 +63,12 @@ module TunMesh
 
         # Inits the session auth with the other end
         # Intended to be called by API::Auth::Session
-        def init_session_token(outbound_auth:)
+        def init_session_token(session_auth_token:)
           payload = {
             public_key: @api_auth.asymmetric_encryption.public_key
           }
 
-          if outbound_auth.nil?
+          if session_auth_token.nil?
             @logger.info { 'initializing session auth using the cluster token' }
             raw_resp = _post_mutual(
               auth: @api_auth.cluster_token,
@@ -77,9 +77,9 @@ module TunMesh
               valid_response_codes: [200]
             )
           else
-            @logger.info { "initializing session auth using existing session auth #{outbound_auth.id}" }
+            @logger.info { "initializing session auth using existing session auth #{session_auth_token.id}" }
             raw_resp = _post_mutual(
-              auth: outbound_auth,
+              auth: session_auth_token,
               path: "/tunmesh/auth/v0/init_session/#{TunMesh::CONFIG.node_id}",
               payload: payload,
               valid_response_codes: [200]
@@ -96,8 +96,8 @@ module TunMesh
         def register(payload:)
           raise(ArgumentError, "Payload must be a TunMesh::ControlPlane::Structs::Registration, got #{payload.class}") unless payload.is_a? TunMesh::ControlPlane::Structs::Registration
 
-          # Key off session auth alone, as if session_auth exists then there is a saved registration
-          return _register_bootstrap(payload: payload) unless session_auth
+          # Key off session auth alone, as if auth_session exists then there is a saved registration
+          return _register_bootstrap(payload: payload) unless auth_session
 
           begin
             return _register_session(payload: payload)
@@ -131,14 +131,14 @@ module TunMesh
           end
         end
 
-        def session_auth
-          @session_auth ||= @api_auth.session_auth_for_node_id(id: remote_id)
+        def auth_session
+          @auth_session ||= @api_auth.auth_session_for_node_id(id: remote_id)
         end
 
         def transmit_packet(packet:)
           raise(ArgumentError, "Packet must be a TunMesh::IPC::Packet, got #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
 
-          session_auth.outbound_auth_wrapper do |auth|
+          auth_session.auth_wrapper do |auth|
             return _post_mutual(
               auth: auth,
               path: "/tunmesh/control/v0/packet/rx/#{TunMesh::CONFIG.node_id}",
@@ -213,7 +213,7 @@ module TunMesh
         def _register_session(payload:)
           @logger.debug { "Registering to #{remote_id} using the session token" }
 
-          session_auth.outbound_auth_wrapper do |auth|
+          auth_session.auth_wrapper do |auth|
             return _post_mutual(
               auth: auth,
               path: "/tunmesh/control/v0/registrations/register/#{TunMesh::CONFIG.node_id}",

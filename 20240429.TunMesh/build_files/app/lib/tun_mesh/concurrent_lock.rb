@@ -12,6 +12,24 @@ module TunMesh
       @concurrent_locks.length
     end
 
+    # Block will prevent a lock, but not other blocks
+    # Can be called recursively
+    def block
+      # Support nested blocking
+      return yield if @concurrent_locks[Thread.current]&.owned?
+
+      concurrent_lock = Mutex.new
+      concurrent_lock.synchronize do
+        @exclusive_lock.synchronize do
+          @concurrent_locks[Thread.current] = concurrent_lock
+        end
+
+        yield
+      end
+    ensure
+      @concurrent_locks.delete(Thread.current)
+    end
+
     def block_held?
       @concurrent_locks[Thread.current]&.owned?
     end
@@ -20,6 +38,8 @@ module TunMesh
       @exclusive_lock.owned?
     end
 
+    # Synchronize behaves like normal Mutex.synchronize
+    # Can be called when a block is held
     def synchronize
       self_concurrent_lock = @concurrent_locks.delete(Thread.current)
       self_concurrent_lock&.unlock
@@ -45,20 +65,6 @@ module TunMesh
       end
     end
 
-    def block
-      # Support nested blocking
-      return yield if @concurrent_locks[Thread.current]&.owned?
-
-      concurrent_lock = Mutex.new
-      concurrent_lock.synchronize do
-        @exclusive_lock.synchronize do
-          @concurrent_locks[Thread.current] = concurrent_lock
-        end
-
-        yield
-      end
-    ensure
-      @concurrent_locks.delete(Thread.current)
-    end
+    # try_lock is not available due to the block pattern and supporting locking within blocking.
   end
 end

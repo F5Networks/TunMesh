@@ -26,8 +26,8 @@ module TunMesh
 
         def process_init_session_request(raw_request:, remote_node_id:)
           @logger.debug("Processing session auth update request from #{remote_node_id}")
-          session_auth = session_auth_for_node_id(id: remote_node_id)
-          return 'Failed', 404 unless session_auth
+          auth_session = auth_session_for_node_id(id: remote_node_id)
+          return 'Failed', 404 unless auth_session
 
           new_secret = Auth::Token.random_secret
 
@@ -48,14 +48,14 @@ module TunMesh
             return 'Failed', 400
           end
 
-          session_auth.inbound_auth = Auth::Token.new(
+          auth_session.inbound_auth = Auth::Token.new(
             id: SecureRandom.uuid,
             secret: new_secret
           )
 
-          @logger.info("Successfully updated inbound session auth for #{remote_node_id} to #{session_auth.inbound_auth.id}")
+          @logger.info("Successfully updated inbound session auth for #{remote_node_id} to #{auth_session.inbound_auth.id}")
           return {
-            id: session_auth.inbound_auth.id,
+            id: auth_session.inbound_auth.id,
             secret: response_secret
           }
         rescue StandardError => exc
@@ -64,8 +64,8 @@ module TunMesh
           return 'Failed', 503
         end
 
-        def session_auth_for_node_id(id:)
-          @api.manager.registrations.node_by_id(id)&.session_auth
+        def auth_session_for_node_id(id:)
+          @api.manager.registrations.node_by_id(id)&.auth_session
         end
       end
     end
