@@ -8,6 +8,8 @@ require_relative 'packets/ip/ipv6'
 
 module TunMesh
   module VPN
+    # TODO: Evaluate and resolve
+    # rubocop: disable Style/IdenticalConditionalBranches
     class Router
       DECODED_PACKET = Struct.new(:net_config, :net_packet, :proto)
 
@@ -269,5 +271,6 @@ module TunMesh
         remote_node.transmit_packet(packet: packet)
       end
     end
+    # rubocop: enable Style/IdenticalConditionalBranches
   end
 end

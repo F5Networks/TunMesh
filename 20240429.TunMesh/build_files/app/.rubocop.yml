@@ -28,6 +28,10 @@ Naming/RescuedExceptionsVariableName:
 Style/Documentation:
   Enabled: false
 
+# Inconsistently recommended, and recommended in a case where it cannot work
+Style/FormatStringToken:
+  Enabled: false
+
 # Do not enforce number separators
 Style/NumericLiterals:
   Enabled: false
@@ -40,7 +44,7 @@ Style/RedundantArgument:
 # TODO: Re-enable when there is full test coverage
 Style/RedundantBegin:
   Enabled: false
-  
+
 # Favor explicit over implicit code: don't complain of "redundant returns"
 Style/RedundantReturn:
   Enabled: false

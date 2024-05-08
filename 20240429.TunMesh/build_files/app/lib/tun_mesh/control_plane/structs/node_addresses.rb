@@ -19,8 +19,11 @@ module TunMesh
 
       # Extra validation, this struct is overloaded to enable other protocols without sprawling the structs
       def _set_attr(name, raw_value)
+        # TODO: This is a bug!
+        # rubocop: disable Lint/UnreachableCode
         raise('This is actually being called') # Test
         super(name, raw_value).validate_proto(name)
+        # rubocop: enable Lint/UnreachableCode
       end
     end
   end

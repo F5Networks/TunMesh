@@ -3,6 +3,7 @@ require_relative 'packets/ip/ipv6'
 
 module TunMesh
   module VPN
+    # rubocop: disable Layout/LineLength
     module Ethertypes
       # Generated from https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml#ieee-802-numbers-1 2024-04-29
       # Ranges are omitted
@@ -182,5 +183,6 @@ module TunMesh
         end
       end
     end
+    # rubocop: enable Layout/LineLength
   end
 end
