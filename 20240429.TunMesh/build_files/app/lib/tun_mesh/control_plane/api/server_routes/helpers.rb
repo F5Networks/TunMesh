@@ -32,7 +32,7 @@ module TunMesh
             )
 
             return remote_node_id
-          rescue StandardError => exc
+          rescue StandardError
             context.status 401
             context.content_type 'text/plain'
             context.body 'Unauthorized'

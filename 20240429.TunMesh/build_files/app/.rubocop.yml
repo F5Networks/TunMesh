@@ -11,6 +11,10 @@ Layout/LineLength:
 Metrics:
  Enabled: false
 
+# Inconsistent
+Naming/AccessorMethodName:
+ Enabled: false
+
 # Subjective
 Naming/HeredocDelimiterNaming:
   Enabled: false

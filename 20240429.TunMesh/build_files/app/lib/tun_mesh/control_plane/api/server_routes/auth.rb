@@ -36,7 +36,7 @@ module TunMesh
                 auth: session_auth,
                 body: req_body,
                 context: self
-              ) do |remote_node_id|
+              ) do
                 settings.api_auth.process_init_session_request(raw_request: req_body, remote_node_id: remote_node_id)
               end
             else

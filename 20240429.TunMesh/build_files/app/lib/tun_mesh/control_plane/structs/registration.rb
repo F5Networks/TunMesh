@@ -19,7 +19,7 @@ module TunMesh
           stamp: {
             type: Integer
           }
-        }
+        }.freeze
       end
     end
   end

@@ -11,13 +11,11 @@ module TunMesh
       # NetAddr::IPv4 doesn't do CIDRs
       # NetAddr::CIDR appears to have been removed in V2
       class NetAddress < Base
-        attr_reader :address
-
         FIELDS = {
           cidr: {
             type: String
           }
-        }
+        }.freeze
 
         def self.parse_cidr(cidr)
           return new(cidr: cidr)

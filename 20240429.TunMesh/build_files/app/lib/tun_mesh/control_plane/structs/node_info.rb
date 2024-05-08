@@ -23,7 +23,7 @@ module TunMesh
           node_addresses: {
             type: NodeAddresses
           }
-        }
+        }.freeze
 
         def self.local
           return @local ||= new(

@@ -81,7 +81,7 @@ module TunMesh
       def outbound_registration_payload
         Structs::Registration.new(
           local: TunMesh::ControlPlane::Structs::NodeInfo.local,
-          remote: @remote_nodes.nodes.map { |rn| rn.node_info },
+          remote: @remote_nodes.nodes.map(&:node_info),
           stamp: Time.now.to_i
         )
       end

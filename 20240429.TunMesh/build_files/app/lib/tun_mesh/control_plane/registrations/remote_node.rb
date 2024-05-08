@@ -9,7 +9,7 @@ module TunMesh
   module ControlPlane
     class Registrations
       class RemoteNode
-        attr_reader :api_client, :id, :registration
+        attr_reader :api_client, :registration
 
         def initialize(manager:, registration:, api_client: nil)
           @manager = manager
