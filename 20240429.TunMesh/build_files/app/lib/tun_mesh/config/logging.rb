@@ -19,7 +19,7 @@ module TunMesh
               error: 'Handleable error conditions.',
               warn: 'Warnings about abnormal conditions.',
               info: 'Normal, informational logs.',
-              debug: 'Detailed debugging information.',
+              debug: 'Detailed debugging information.'
             }
           )
         )

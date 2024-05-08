@@ -13,9 +13,7 @@ module TunMesh
 
         def load_config_value(value:, **)
           case value
-          when ::Float
-            @value = value
-          when ::Integer
+          when ::Float, ::Integer
             @value = value
           when ::String
             @value = _parse_string_value(value)
@@ -45,9 +43,10 @@ module TunMesh
 
         def _parse_string_value_no_suffix(value)
           split_value = value.split('..')
-          if split_value.length == 1
+          case split_value.length
+          when 1
             return Float(value)
-          elsif split_value.length == 2
+          when 2
             range_low = Float(split_value[0])
             range_high = Float(split_value[1])
             return(rand(range_low..range_high))

@@ -14,7 +14,7 @@ module TunMesh
       end
 
       def add_field(field)
-        raise(RuntimeError, 'Output value already read') if @value
+        raise('Output value already read') if @value
         raise(ArgumentError, "Duplicate field #{field.key}") if field_keys.include?(field.key)
 
         @fields.push(field)
@@ -38,8 +38,8 @@ module TunMesh
         end
 
         # Order settings before groups, this makes the config more readable
-        setting_fields = fields.reject { |field| field.is_a? Group }.sort_by { |f| f.key }
-        group_fields = fields.select { |field| field.is_a? Group }.sort_by { |f| f.key }
+        setting_fields = fields.reject { |field| field.is_a? Group }.sort_by(&:key)
+        group_fields = fields.select { |field| field.is_a? Group }.sort_by(&:key)
 
         setting_fields.each.with_index do |field, index|
           lines.push('') if index > 0
@@ -91,7 +91,7 @@ module TunMesh
           rescue Errors::ParseError => exc
             raise exc
           rescue StandardError => exc
-            raise(Errors::ParseError.new("#{exc.class}: #{exc}"))
+            raise(Errors::ParseError, "#{exc.class}: #{exc}")
           end
 
         rescue Errors::ParseError => exc
@@ -104,7 +104,7 @@ module TunMesh
       end
 
       def required
-        @fields.map { |f| f.required }.any?
+        @fields.map(&:required).any?
       end
 
       def value

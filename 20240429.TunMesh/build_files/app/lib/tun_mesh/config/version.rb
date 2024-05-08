@@ -4,7 +4,7 @@ require_relative 'errors'
 module TunMesh
   class Config
     class Version < Types::Base
-      VERSION = '1.0'
+      VERSION = '1.0'.freeze
 
       def initialize
         super(

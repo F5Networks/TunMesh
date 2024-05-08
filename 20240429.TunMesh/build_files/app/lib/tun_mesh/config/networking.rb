@@ -6,7 +6,7 @@ module TunMesh
   class Config
     class Networking < Group
       # List of supported protocols, used in building address structs
-      SUPPORTED_PROTOCOLS = %i[ipv4]
+      SUPPORTED_PROTOCOLS = %i[ipv4].freeze
 
       def initialize
         super(
