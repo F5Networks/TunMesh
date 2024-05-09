@@ -5,19 +5,19 @@ General Patterns
 ----------------
 
 - Authenticated requests use a JWT header using HMAC256 signing for authentication
--- Authentication may be bidirectional: responses may be signed depending on the endpoint
--- The JWT includes the following signed claims
---- The sending node ID (iss)
---- The receiving node ID (aud)
---- A unique auth id (sub)
---- A signature of the payload (sig)
----- SHA256 of control payloads
----- MD5 of data payloads
------ Performance compromise: Reuse of an established signature from earlier in the flow, and md5 is faster.
--- Symmetric keys are used:
---- For the cluster key both ends need to know the secret as all nodes are equal in the cluster, so no benefit to symmetric signing and a serious configuration penalty (The HMAC secret can be any random string).
---- Session auth will be relatively high volume signing, so the lower computational overhead of symmetric keys is desirable.
---- Using the same algorithm for cluster and session auth reduces code complexity.
+  - Authentication may be bidirectional: responses may be signed depending on the endpoint
+  - The JWT includes the following signed claims
+    - The sending node ID (iss)
+    - The receiving node ID (aud)
+    - A unique auth id (sub)
+    - A signature of the payload (sig)
+      - SHA256 of control payloads
+      - MD5 of data payloads
+        - Performance compromise: Reuse of an established signature from earlier in the flow, and md5 is faster.
+  - Symmetric keys are used:
+    - For the cluster key both ends need to know the secret as all nodes are equal in the cluster, so no benefit to symmetric signing and a serious configuration penalty (The HMAC secret can be any random string).
+    - Session auth will be relatively high volume signing, so the lower computational overhead of symmetric keys is desirable.
+    - Using the same algorithm for cluster and session auth reduces code complexity.
 
 Common Structures
 -----------------

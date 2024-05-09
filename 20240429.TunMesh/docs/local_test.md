@@ -47,7 +47,7 @@ Send some traffic
 ### Ping instance 3 from instance 1
 
 - Note that this is running a new container in the `tm1` network namespace.
--- A application started with the same `net=` setting will have transparent IP access to the other nodes in the mesh via the internal IPs.
+  - A application started with the same `net=` setting will have transparent IP access to the other nodes in the mesh via the internal IPs.
 
 ```
 docker run --rm -ti --net=container:tm1 tun_mesh ping 192.168.129.30
