@@ -75,25 +75,27 @@ The registration step is important to happen early as the internal data structur
                               |                                                            |
                               | (1) N request's node_info from E via initial URL           |
                    START ---  | --------[ Potential NAT and/or load balancing ]-------->   |
-                              | GET tunmesh/control/v0/node_info (No Auth)                 |
+                              | GET tunmesh/control/v0/node_info  (No Auth)                |
                               |                                                            | Stateless operation on E
                               |                                                            | Returning static, non-sensitive data
 N Updates internal datastores |                                                            |
 with response ID and          |                           (2) responds with a JSON payload |
 listen URL   +--------------- |   <------------------------------------------------------- |
+             |                |       (Unsigned)                                           |
              |                |                                                            |
              |                |                                                            |
              |                | (3) N sends a registration POST using cluster auth         |
              |                |       to the listen_url in (2)                             |  
              +--------------> | ------------------------------------------------------->   | ----+  E initializes the internal
-                              | POST /tunmesh/control/v0/registrations/register (Cluster)  |     |  data structures for interacting
-                              |                                                            |     |  with N, and can now negotiate
+                              | POST /tunmesh/control/v0/registrations/register            |     |  data structures for interacting
+                              | (Cluster Auth)                                             |     |  with N, and can now negotiate
                               |                                                            |     |  a session and route traffic.
+                              |                                                            |     |
 N initializes the internal    |   (4) E responds with its own registration payload         |     |
 data structures for E,        |       causing mutual registration.  The response           |     |
 and can now negotiate         |       is also signed with the cluster token.               |     |
 a session             END --- |   <------------------------------------------------------- | ----+
-and route traffic.            |                                                            |
+and route traffic.            |      (Signed response: Cluster auth)                       |
 This completes the            |                                                            |
 registration flow.            |                                                            |
 ```
@@ -103,7 +105,7 @@ registration flow.            |                                                 
 #### 1 & 2: tunmesh/control/v0/node_info
 
 The first request is a unauthenticated GET to the target node to get required information about the remote node.
-The tunmesh/control/v0/node_info endpoint is a unauthenticated GET endpoint that returns:
+The tunmesh/control/v0/node_info endpoint is a unauthenticated GET endpoint that returns (2):
 
 - The node ID: A randomly generated UUID identifying the unique node instance.  This ID is generated on startup and static for the life of the process
 - The node listen URL
@@ -118,8 +120,8 @@ The ID is not sensitive and is exposed via logs, open endpoints, and monitoring 
 The listen URL is sent to support bootstrapping over load balancers.
 The API protocol is designed for point to point VPN links, each node needs to be able to communicate direct with targeted remote nodes.
 As such the protocol design is incompatible with load balancing: the auth signing, session handling, and general packet routing requires all requests to a given URL to go to a single, unique node for that URL.
-However, there are valid cases for using a load balancer for bootstrapping, such as when creating a mesh across multiple clusters.
-Returning the listen URL allows the requesting node to discover the real listen address of a node in the cluster and use the direct URL for all subsequent requests.
+However, there are valid cases for using a load balancer for bootstrapping, such as when creating a mesh across multiple containerization clusters or DCs.
+Returning the listen URL allows the requesting node to discover the real listen address of a node in the cluster and use the direct listen URL for all subsequent requests.
 
 #### 3: Initial Registration
 
@@ -146,18 +148,18 @@ At this point N can accept session auth requests from E, traffic from E, and wil
 
 #### 1 & 2: tunmesh/control/v0/node_info request
 
-This is a open and unauthenticated request, at a point in the flow where nodes N and E have no established sessions or trust.
+This is a open and unauthenticated request, at a point in the flow where nodes N and E have no established sessions.
 This request is protected by the API TLS handshake, which verifies the server cert is trusted.
 The server cert hostname is not verified by default as it is expected that the the URL is dynamic and not in the cert.
 
-This request is attackable if the attacker can bypass the TLS verification.
+This request is attackable if the attacker can bypass the TLS verification, such as by using a cert from the same CA.
 Once past the TLS verification an attacker could return a poisoned payload to an attacker controlled listen URL.
 
 #### 3: Initial Registration
 
 Assuming an attacker poisoned the response in 2 to a attacker controlled URL the server will send a post to a malicious URL.
 
-This payload will contain the registration details, which is considered nonsensitive and, as of 2024-05-07 / v0.5.12 returned via an opened endpoint.
+This payload will contain the registration details, which is considered nonsensitive and, as of 2024-05-07 / v0.5.12 returned via an open endpoint.
 
 The payload will be signed with the cluster token.
 The signing is (as of 2024-05-07 / v0.5.12) HMAC256 so the signing is non-reversible.
@@ -181,8 +183,9 @@ This diagrams shows the API Calls of a established node (A) re-registering into 
 
 This flow is almost the same as the initial registration, except B's node_data is already known and session auth will be used instead of cluster auth.
 Session Auth setup is documented in `Session Auth Request` below.
+This flow will trigger a session auth request if session auth is not yet established.
 
-If the node is unable to register with session auth it may fall back to cluster auth, in which case the flow is the same just with the same URL and auth as initial registration steps 3 & 4.
+If the node is unable to register with session auth it may fall back to cluster auth, in which case the flow is the same just with the URL and auth used by initial registration steps 3 & 4.
 
 ```
                               A                                                            B
@@ -198,6 +201,7 @@ A updates its internal        |   (2) B responds with its own registration paylo
 data structures for B         |       causing mutual registration.  The response           |     |
                               |       is signed with B's session auth to A.                |     |
                       END --- |   <------------------------------------------------------- | ----+
+                              |      (Signed response: Cluster auth)                       |
                               |                                                            |
                               |                                                            |
 ```
@@ -211,7 +215,7 @@ This request contains a Registration Payload.
 
 This request is protected by the API TLS.
 A verifies B's cert is trusted.
-A does not verify B's TLS hostname, the session token is used instead to confirm identity.
+A does not verify B's TLS hostname by default, the session token is used instead to confirm identity.
 
 This request is signed using a pre-negotiated session token.
 If the request fails with a error that A is not known to B then A will fall back to cluster auth, repeating steps 3 and 4 of the initial registration flow.
@@ -249,19 +253,25 @@ Session Auth Request
 
 This diagrams shows the API Calls of a receiving (R) node negotiating session auth with a generating node (G).
 
+In this flow the requester (R) requests a session secret from the remote node (G).
+G then generates a session secret and securely sends it back to the receiving node that initiated the request (R).
+This remote generates model was chosen as it allows the entire flow in a single POST request with both legs signed and good fault feedback flows.
+
 This flow can be initiated by the following triggers:
 
 - R has a packet to route to G, but has not yet established a session
-- R needs to refresh its registration and the session auth is 
+- R needs to refresh its registration and the session auth is not yet established
 - A session auth fault triggering renegotiation
+- Session auth expiration (1 hour by default)
 
 This flow requires G and R to be registered to each other.
 
 Session auth is symmetric, but is only used for traffic in one direction.
 The unidirectional usage is done to reduce potential race conditions.
+So if G needs to send a packet to R it will not use the auth from this request, it will instead initiate this flow with the roles reversed.
 
 The session secret is encrypted in transit internally.
-This entire flow is protected by the server TLS layer, but due to this flow sending essentially a password over the wire an additional encrypt step was added so that secrets are never sent in the clear.
+This entire flow is protected by the server TLS layer, but due to this flow sending essentially a password over the wire an additional encrypt step was added so that secrets are never sent clear text in the API payload.
 
 As this flow is not directly triggered by the registration process R and G do not map to N and E in the registration flow, the roles may be reversed.
 
@@ -277,7 +287,7 @@ This flow uses session auth if established, or cluster auth if not.
                               | POST /tunmesh/auth/v0/init_session/[ID] (Session Auth)     |    |   and encrypts it with the public key in the request.
                               |                                                            |    | G replaces its internal R to G auth token with a new token
                               |                                                            |    |   using the new secret, and returns the encrypted secret.
-G decrypts the secret         |             (2) G replies with the encrypted shares secret |    |
+G decrypts the secret         |             (2) G replies with the encrypted shared secret |    |
 and updates its       END --- |  <-------------------------------------------------------- | ---+
 R to G token.                 |                        (Same auth pattern as the request)  |
                               |                                                            |
@@ -290,9 +300,40 @@ R to G token.                 |                        (Same auth pattern as the
 
 This request is a unsolicited POST to create or rotate the session auth R uses when sending to G.
 This request contains a RSA public key, 2048 bits by default.
-This key is unique to R and generated on process start.
+This public key is unique to R and generated on process start.
 
-This request is signed by R as authentication only, this request is not sensitive.
+This request is signed by R to authenticate that the request is valid.
+If R has a session established with G, it will use the session auth to avoid using the cluster token.
+If session auth is not established it will use cluster auth.
+
+Upon receiving and validating the signature G generates a new shared secret for the R to G session auth.
+G then uses the public key in the request to encrypt the shared secret for transmission.
+
+### 2: B -> A encrypted secret response
+
+This is the response to the session request in step 1.
+
+G transmits the encrypted secret it generated in response to step 1 and a ID for the new session.
+The ID is a randomly generated UUID used to uniquely identify the auth session.
+
+This response is signed by G.
+The auth used depends on the request auth.
+If R used cluster auth G will use cluster auth.
+If R used session auth the G will also use session auth.
+G will sign using it's G -> R session token.
+
+Upon receiving the response R validates that the signature is correct.
+R then decrypts the payload to get the new shared secret, and then updates it's R -> G auth token with the new secret completing the flow.
+
+### Attack Vectors
+
+#### 1: A -> B session init request
+
+This request is a unsolicited POST to create or rotate the session auth R uses when sending to G.
+
+This request is signed by R to authenticate that the request is valid.
+The payload request is not sensitive.
+If an attacker was able to compromise the TLS session and eavesdrop they would not be able to gain any useful information, as this request contains non-secret data.
 
 If an attacker was able to replace the RSA public key they would not be able to impersonate G as G does not use the session secret generated here to auth to R.
 If an attacker replaced the RSA key in the request and replayed it to R the transaction would fail as R would not be able to decrypt the secret with the original private key.
@@ -305,18 +346,12 @@ For a impersonation attack to work the attacker would need to trigger a request,
 ### 2: B -> A encrypted secret response
 
 This is the response to the session request in step 1.
-
-This request is signed by G.
-The auth used depends on the request auth.
-If R uses session auth the G will also use session auth.
-If R uses cluster auth G will use cluster auth.
-
 As this is a response to an established connection injecting data will be very difficult.
 
 A MITM attack is impractical as the response is both signed with a JWT token and the response is encrypted with R's private key.
 To MITM this leg of the flow an attacker would need to compromise both G to R's session token and R's RSA key.
 
-This request is resilient to eavesdropping due to the internal encryption in use, beyond the outer API TLS encryption.
+This request is resilient to eavesdropping due to the internal encryption in use, in addition to the outer API TLS encryption.
 
 Packet TX
 ---------
@@ -325,8 +360,8 @@ This diagrams shows the API Calls of a transmitting (T) node sending a packet to
 
 This flow is initiated by T receiving a packet over the tun device destined for R.
 
-This flow requires G and R to be registered to each other.
-This flow requires T -> R session auth.
+This flow requires T and R to be registered to each other.
+This flow requires T -> R session auth, which will be initiated if it does not already exist.
 
 ```
                               T                                                            R
@@ -343,22 +378,38 @@ T logs any errors.            |                           (2) R replies with an 
                               |                                                            |
 ```
 
+### Detailed steps
+
 #### 1: T -> R packet transmission 
 
 This request is a unsolicited POST to transmit a packet.
 This request contains the contents of a tunneled network packet.
 
+This flow is initiated on T by the receipt of a network packet.
+T will determine the destination address of the packet, perform checks, and map it to one of R's registered network addresses.
+
 This request is signed using a pre-negotiated session token.
 Cluster auth is not supported.
+If T does not have a session auth token to R it will establish one before making this request.
 
-If there is a fault the packet is dropped, and left to the app generating the traffic to retry.
+T does not encrypt the packet, the API TLS session is used for secrecy.
+T does fingerprint the packet, the fingerprint is included in the signed session auth.
+
+Upon receiving the packet R validates the session auth and packet signature.
+If there is a fault the packet is dropped, and left to the external app generating the traffic to retry.
+
+Upon successful validation R enqueues the packet for final checks and transmission.
 
 #### 2: R -> T packet response
 
-This is a HTTP 204 with no body, except on auth error where `4XX` errors will be returned.
+R responds with a HTTP 204 with no body to signal success.
+The 204 is sent after verifying the signature and accepting the packet for processing.
+A 204 does not mean the packet was sent out the TUN device, it means the packet was accepted and queued.
+
+R may still drop the packet if the checks on R's side fail.
+In this case there is no feedback to T, only logs on R.
 
 This response is unsigned as there is nothing to sign.
-A `4XX` error may force a session renegotiation but otherwise T takes no action based on the response.
 
 ### Attack Vectors
 
@@ -370,13 +421,13 @@ The TLS layer provides the eavesdropping protection to protect the packet.
 T does not verify R's TLS certificate hostname, as R's advertised URL is expected to be dynamic and not match the certificate CN.
 T trusts that the URL it has for R is correct, and the TLS certificate check should reject malicious servers.
 
-This Reception on R is protected by the session token which is used both to show that the packet came from T and was not tampered with.
+The Reception on R is protected by the session token which is used both to show that the packet came from T and was not tampered with.
 If an attacker is able to compromise a session token they can inject traffic into the container stack on R.
 
 Routing from the tunnel out of the container stack is not supported.
 Malicious packets not destined for the local tunnel IP will be blocked and logged by R.
 
-#### 2: Registration POST response
+#### 2: R -> T packet response
 
 This response is empty and T takes no action based on it.
 
