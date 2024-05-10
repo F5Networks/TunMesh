@@ -1,8 +1,23 @@
-# Sets common scripts and the REGISTRY
-include ../cicd/Makefile.component_base
+SHELL := /bin/sh
+REPO_CICD_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+GIT_SHA := $(shell git rev-parse HEAD)
+TIMESTAMP := $(shell date -u '+%s')
 
-# Override: Using common ci/cd scripts but this repo, being a POC/Sandbox repo changes the pattern slightly
-COMPONENT := tun_mesh
+INTERNAL_IMAGE="tun_mesh:current-build"
+REGISTRY="tun_mesh" # TODO: Final repo
+
+CONTAINER_RUN = docker run --rm --entrypoint="" $(INTERNAL_IMAGE)
+
+# The default target is the first command
+default: all
+
+# https://stackoverflow.com/questions/44492805/declare-all-targets-phony
+.PHONY: *
+
+all: container test lint
+
+clean:
+	docker rmi $(INTERNAL_IMAGE) || /bin/true
 
 deploy: container lint test push-registry
 
@@ -14,12 +29,10 @@ container:
 		--label "com.f5.tun_mesh.repo_clean=$(shell cicd/manage_version.sh -c)" \
 		-t $(INTERNAL_IMAGE) .
 
-# NOTE: There is no explicit container dependency for CI/CD where we do not want the test and deploy targets rebulding the image
-# When running local the container target will need to be manually built
-lint:
+lint: container
 	$(CONTAINER_RUN) bundle exec rubocop
 
-test:
+test: container
 	$(CONTAINER_RUN) bundle exec rspec -fd
 
 push-registry:
