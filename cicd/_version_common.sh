@@ -15,7 +15,7 @@ else
     REPO_CLEAN=true
 fi
 
-PRIMARY_VERSION_FILE="${SOURCE_DIR}/Version"
+PRIMARY_VERSION_FILE="${SOURCE_DIR}/.versions"
 if [ ! -f "${PRIMARY_VERSION_FILE}" ]; then
     echo >&2 "ERROR: Version file ${PRIMARY_VERSION_FILE} not found"
     echo "FAULT"
