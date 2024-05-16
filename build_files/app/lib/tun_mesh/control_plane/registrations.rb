@@ -2,6 +2,7 @@ require './lib/tun_mesh/config'
 require './lib/tun_mesh/logger'
 require_relative 'structs/node_info'
 require_relative 'structs/registration'
+require_relative 'registrations/bootstrap_group'
 require_relative 'registrations/errors'
 require_relative 'registrations/fault_tracker'
 require_relative 'registrations/remote_node_pool'
@@ -13,10 +14,11 @@ module TunMesh
         @logger = TunMesh::Logger.new(id: self.class.to_s)
         @manager = manager
 
-        @remote_nodes = RemoteNodePool.new(manager: @manager)
+        @bootstrap_groups = Hash.new do |h, k|
+          h[k] = BootstrapGroup.new(name: k, registrations: self)
+        end
 
-        @bootstrap_attempts = 0
-        @last_bootstrap_attempt_stamp = 0
+        @remote_nodes = RemoteNodePool.new(manager: @manager)
         @startup_grace_threshold = Time.now.to_f + TunMesh::CONFIG.values.process.timing.registrations.startup_grace
 
         @fault_trackers = Hash.new do |h, k|
@@ -27,45 +29,46 @@ module TunMesh
       end
 
       def bootstrapped?
-        return true unless @remote_nodes.empty?
+        return false if @bootstrap_groups.empty?
 
-        # NOTE: if we bootstrap successfully and then laters groom all the remote nodes out of the node pool
-        #  this will cause bootstrapping to be re-attempted.  Considering this a feature not a bug.
-        return true if @bootstrap_attempts > TunMesh::CONFIG.values.clustering.bootstrap_retries
-
-        return false
+        return @bootstrap_groups.values.map(&:bootstrapped?).all?
       end
 
       def bootstrap!
-        @last_bootstrap_attempt_stamp = Time.now.to_i
-        @bootstrap_attempts += 1
+        if TunMesh::CONFIG.values.clustering.reload_config_on_bootstrap
+          @logger.debug('bootstrap!: Reloading config per config clustering.reload_config_on_bootstrap')
+          TunMesh::CONFIG.parse_config! if TunMesh::CONFIG.values.clustering.reload_config_on_bootstrap
+        end
 
-        @logger.info("Bootstrapping into cluster, attempt #{@bootstrap_attempts}/#{TunMesh::CONFIG.values.clustering.bootstrap_retries + 1}")
-        TunMesh::CONFIG.parse_config! if TunMesh::CONFIG.values.clustering.reload_config_on_bootstrap
-        TunMesh::CONFIG.values.clustering.bootstrap_node_urls.each do |node_url|
-          bootstrap_node(remote_url: node_url)
+        TunMesh::CONFIG.values.clustering.bootstrap_groups.each_key do |group_name|
+          @bootstrap_groups[group_name].bootstrap! unless @bootstrap_groups[group_name].bootstrapped?
+        rescue StandardError => exc
+          @logger.error("Failed to bootstrap group #{group_name}: exception: #{exc.class}: #{exc}")
+          @logger.debug(exc.backtrace)
+          next
         end
       end
 
       def bootstrap_node(remote_url:, remote_node_id: nil)
         if remote_url == TunMesh::CONFIG.values.clustering.control_api_advertise_url.to_s
           @logger.debug("Skipping bootstrap to #{remote_url}: Self")
-          return
+          return nil
         end
 
         if @fault_trackers[:bootstrap].blocked?(id: remote_url)
           @logger.debug("Bootstrap to #{remote_url} blocked by fault tracker")
-          return
+          return nil
         end
 
         @logger.info("Bootstrapping remote node #{remote_node_id} at #{remote_url}")
 
-        @fault_trackers[:bootstrap].instrument(id: remote_url) do
+        return @fault_trackers[:bootstrap].instrument(id: remote_url) do
           _register(api_client: @manager.api.new_client(remote_url: remote_url))
         end
       rescue StandardError => exc
         @logger.warn("Failed to bootstrap node at #{remote_url}: #{exc.class}: #{exc}")
         @logger.debug { exc.backtrace }
+        return nil
       end
 
       def health
@@ -109,9 +112,7 @@ module TunMesh
           @logger.info("Received new registration from #{registration.local.id} (#{age}s old)")
         end
 
-        @remote_nodes.register(api_client: api_client, registration: registration)
-
-        return registration
+        return @remote_nodes.register(api_client: api_client, registration: registration)
       end
 
       def node_by_address(**kwargs)
@@ -150,7 +151,7 @@ module TunMesh
 
       def _groom
         begin
-          bootstrap! if !bootstrapped? && (Time.now.to_i - @last_bootstrap_attempt_stamp) >= TunMesh::CONFIG.values.process.timing.registrations.bootstrap_retry_interval
+          bootstrap! unless bootstrapped?
         rescue StandardError => exc
           @logger.error("Failed to bootstrap: exception: #{exc.class}: #{exc}")
           @logger.debug(exc.backtrace)

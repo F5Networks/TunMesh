@@ -4,11 +4,13 @@
 #   These values will likely need tuning depending on the host config.
 ---
 tun_mesh:
-  config_version: 1.0
+  config_version: 1.1
   clustering:
-    bootstrap_node_urls:
-      - https://192.168.128.1:4567
-      - https://192.168.128.1:4568
+    bootstrap_groups:
+      default:
+        bootstrap_node_urls:
+          - https://192.168.128.1:4567
+          - https://192.168.128.1:4568
 
     control_api_advertise_url: https://192.168.128.1:4569
     auth:
