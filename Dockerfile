@@ -24,9 +24,6 @@ FROM public.ecr.aws/docker/library/ruby:3.2-slim
 RUN apt-get update && \
     apt-get install -y ca-certificates
 
-# Test deps
-RUN apt-get install -y procps iproute2 net-tools iputils-ping netcat-openbsd tcpdump curl
-
 RUN groupadd -g 100010 tunmesh && \
     useradd -m -u 100010 -g 100010 tunmesh
 
