@@ -35,16 +35,15 @@ module TunMesh
           add_field(
             Types::Int.new(
               key: 'bootstrap_retries',
-              default: 0,
+              default: -1,
               min: -1,
               description_short: 'Number of times to retry bootstrapping, when not joined to a cluster',
               description_long: <<~EOF
                 If initial bootstrapping fails to register to any node, or if we fail to recieve inbound registrations, retry the bootstrap_node_urls list up to this many times.
                 Delay between attempts is the tun_mesh/process/timing/registrations/bootstrap_retry_interval value.
-                Intended as a mitigation for badly behaved orchestration platforms, this allows bootstrapping through a load balancer if the orchestration platform does not allow service discovery or proper templating of bootstrap_node_urls.
-                Note that when enabled the node will re-attempt bootstrapping if all the nodes are groomed out of the pool.
+                Note that when enabled the node will re-attempt bootstrapping if all the group nodes are groomed out of the pool.
                 See also tun_mesh/process/timing/registrations/startup_grace to ensure the node initially passes healthchecks with no registrations.
-                Set to 0 for only a single retry.
+                Set to 0 for only a single attempt.
                 Set to -1 for infinite retries.
               EOF
             )
