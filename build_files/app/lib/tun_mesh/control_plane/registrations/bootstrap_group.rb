@@ -18,6 +18,8 @@ module TunMesh
 
         def bootstrapped?
           _groom
+
+          return true if config.bootstrap_node_urls.empty?
           return true unless @remote_node_ids.empty?
 
           # NOTE: if we bootstrap successfully and then later groom all the remote nodes out of the node pool
