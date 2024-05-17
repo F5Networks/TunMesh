@@ -37,6 +37,13 @@ module TunMesh
           lines.push("# #{key}:")
         end
 
+        lines += example_value_lines
+        return lines
+      end
+
+      def example_value_lines
+        lines = []
+
         # Order settings before groups, this makes the config more readable
         setting_fields = fields.reject { |field| field.is_a? Group }.sort_by(&:key)
         group_fields = fields.select { |field| field.is_a? Group }.sort_by(&:key)

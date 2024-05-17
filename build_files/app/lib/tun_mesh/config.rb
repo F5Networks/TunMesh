@@ -50,13 +50,13 @@ module TunMesh
       faulted_key = exc.key
       faulted_key ||= '[Unknown]'
 
-      warn("Failed to parse config file #{path}")
+      warn("Failed to parse config file #{config_path}")
       warn("#{exc.class} at key #{faulted_key}: #{exc}")
       warn('')
 
       raise exc
     rescue StandardError => exc
-      warn("Failed to parse config file #{path}")
+      warn("Failed to parse config file #{config_path}")
       warn("#{exc.class}: #{exc}")
       warn('')
       raise exc

@@ -32,7 +32,7 @@ while getopts ":chMms" arg; do
             ;;
         s)
             echo "${SEMVER_FULL}"
-            exit 0        
+            exit 0
             ;;
         M)
             ACTION="inc_major"
@@ -72,7 +72,7 @@ case $ACTION in
         exit 1
         ;;
 esac
-    
+
 SOURCE_GIT_SHA=$(git log  --pretty=format:"%H" -1 "${SOURCE_DIR}")
 echo "Incrementing version MAJOR.MINOR from ${SEMVER_VERSION_MAJOR}.${SEMVER_VERSION_MINOR} to ${NEW_SEMVER_VERSION_MAJOR}.${NEW_SEMVER_VERSION_MINOR} on commit ${SOURCE_GIT_SHA}"
 echo -e "${NEW_SEMVER_VERSION_MAJOR}.${NEW_SEMVER_VERSION_MINOR}\t${SOURCE_GIT_SHA}" >> "${PRIMARY_VERSION_FILE}"
