@@ -19,14 +19,14 @@ function tag_and_push {
     docker push "${OUTPUT_BASE_IMAGE}:${1}"
     echo "**********"
 }
-    
+
 SOURCE_IMAGE="${1}"
 OUTPUT_BASE_IMAGE="${2}"
 
 IMAGE_LABELS_JSON=$(docker inspect tjnii-sandbox/tun_mesh:current-build | jq '.[0].Config.Labels' -ce)
 SEMVER_FULL=$(echo "${IMAGE_LABELS_JSON}" | jq -re '."com.f5.tun_mesh.version"')
 REPO_CLEAN=$(echo "${IMAGE_LABELS_JSON}" | jq -re '."com.f5.tun_mesh.repo_clean"')
-              
+
 # Following the same basic conventions as Alpine
 tag_and_push "${SEMVER_FULL}"
 tag_and_push "edge"

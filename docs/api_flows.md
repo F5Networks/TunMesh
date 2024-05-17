@@ -85,7 +85,7 @@ listen URL   +--------------- |   <---------------------------------------------
              |                |                                                            |
              |                |                                                            |
              |                | (3) N sends a registration POST using cluster auth         |
-             |                |       to the listen_url in (2)                             |  
+             |                |       to the listen_url in (2)                             |
              +--------------> | ------------------------------------------------------->   | ----+  E initializes the internal
                               | POST /tunmesh/control/v0/registrations/register            |     |  data structures for interacting
                               | (Cluster Auth)                                             |     |  with N, and can now negotiate
@@ -191,7 +191,7 @@ If the node is unable to register with session auth it may fall back to cluster 
                               A                                                            B
                               |                                                            |
                               | (1) A sends a registration POST using session auth         |
-                              |     to the listen_url advertised in previous registrations |  
+                              |     to the listen_url advertised in previous registrations |
                    START ---  | ------------------------------------------------------->   | ----+  B updates its internal data
                               | POST /tunmesh/control/v0/registrations/register/[ID]       |     |    structures as needed.
                               |      (Session Auth: A -> B)                                |     |
@@ -366,11 +366,11 @@ This flow requires T -> R session auth, which will be initiated if it does not a
 ```
                               T                                                            R
                               |                                                            |
-                              | (1) T makes a post request to R with the packet payload    | 
+                              | (1) T makes a post request to R with the packet payload    |
                     START --- | -------------------------------------------------------->  | ---+ R validates the auth token sent in the request.
                               | POST /tunmesh/control/v0/packet/rx/[ID] (Session Auth)     |    | Once validated the packet is accepted for final
                               |                                                            |    |   checks and transmission on the local tun device.
-                              |                                                            |    |   
+                              |                                                            |    |
 T logs any errors.            |                           (2) R replies with an empty 204  |    |
                       END --- |  <-------------------------------------------------------- | ---+
                               |                                      (No auth: no content) |
@@ -380,7 +380,7 @@ T logs any errors.            |                           (2) R replies with an 
 
 ### Detailed steps
 
-#### 1: T -> R packet transmission 
+#### 1: T -> R packet transmission
 
 This request is a unsolicited POST to transmit a packet.
 This request contains the contents of a tunneled network packet.

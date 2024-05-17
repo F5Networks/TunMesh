@@ -22,7 +22,7 @@ tun_mesh:
 
   logging:
     level: debug
-      
+
   monitoring:
     method: prometheus
     prometheus:
