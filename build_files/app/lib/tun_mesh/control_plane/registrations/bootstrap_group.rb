@@ -53,7 +53,7 @@ module TunMesh
             end
           end
 
-          @logger.warn("Failed to bootstrap group") if @remote_node_ids.empty?
+          @logger.warn('Failed to bootstrap group') if @remote_node_ids.empty?
         end
 
         def config
