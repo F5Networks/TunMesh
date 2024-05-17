@@ -37,3 +37,9 @@ Minor versions contain breaking changes.
 - Refactor session auth flow to reduce mitm risk
   - This change refactors the auth flow and endpoints, and is a breaking change.
 - Various bugfixes and improvements
+
+### 0.7
+
+- Refactor bootstrap config to allow grouping of bootstrap URLs with separate settings.
+  - Bumps config version to 1.0
+  - Incompatible with previous config format, compatible with 0.6 remote nodes.
