@@ -111,6 +111,12 @@ module TunMesh
                          packet = TunMesh::IPC::Packet.from_tun(raw: raw_data, rx_stamp: Time.now.to_f)
                          @logger.debug { "Read #{packet.id} #{packet.data_length}b" }
                          @queue_manager.tun_read.push(packet.encode)
+                       rescue Errno::EINVAL => exc
+                         # This only happens under load, and is outside this code
+                         # Root cause is unknown
+                         # Log at debug level as it can flood out the terminal
+                         @logger.debug { "Failed to read tun device: #{exc.class}: #{exc}" }
+                         @logger.debug { exc.backtrace }
                        rescue StandardError => exc
                          @logger.warn { "Failed to read tun device: #{exc.class}: #{exc}" }
                          @logger.debug { exc.backtrace }
