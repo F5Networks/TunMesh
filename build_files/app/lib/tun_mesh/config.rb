@@ -44,8 +44,11 @@ module TunMesh
       raise(Config::Errors::MissingKeyError.new('Missing top level tun_mesh key', 'tun_mesh')) unless yaml_parsed_contents.key?('tun_mesh')
 
       # Pass self through at a root of tree so parsers can cross-reference
-      @parsed_top_group = Config::Top.new
-      @parsed_top_group.load_config_value(value: yaml_parsed_contents['tun_mesh'], config_obj: self)
+      load_parsed_top_group = Config::Top.new
+      load_parsed_top_group.load_config_value(value: yaml_parsed_contents['tun_mesh'], config_obj: self)
+
+      # Write @parsed_top_group atomically to avoid races with reparsing the config
+      @parsed_top_group = load_parsed_top_group
     rescue Config::Errors::ParseError => exc
       faulted_key = exc.key
       faulted_key ||= '[Unknown]'
