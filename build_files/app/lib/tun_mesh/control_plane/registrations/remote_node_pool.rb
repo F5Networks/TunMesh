@@ -54,6 +54,8 @@ module TunMesh
 
         def node_by_address(**kwargs)
           return _node_by_id_safe(node_id: node_id_by_address(**kwargs))
+        rescue StandardError => exc
+          raise("INTERNAL ERROR: Node address lookup for #{kwargs} failed: #{exc.class}: #{exc}")
         end
 
         def node_by_id(id)
@@ -130,7 +132,7 @@ module TunMesh
           return nil unless node_id
 
           node = @node_lookup_lock.synchronize { node_by_id(node_id) }
-          raise("INTERNAL ERROR: Address lookup for #{kwargs} returned unknown ID #{node_id}") unless node
+          raise("INTERNAL ERROR: Unknown node ID #{node_id}") unless node
 
           return node
         end
