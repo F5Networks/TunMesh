@@ -25,7 +25,7 @@ module TunMesh
 
       def rx_remote_packet(packet_json:, source:)
         packet = TunMesh::IPC::Packet.from_json(packet_json)
-        @manager.monitors.increment_gauge(id: :tun_rx_packets)
+        @manager.monitors.record_remote_rx_packet(packet: packet)
         _rx_packet(packet: packet, source: source)
       end
 
@@ -109,6 +109,7 @@ module TunMesh
           loop do
             begin
               packet = TunMesh::IPC::Packet.decode(@queue_manager.tun_read.pop)
+              @manager.monitors.record_tun_rx_packet(packet: packet)
               _rx_packet(packet: packet, source: :local)
             rescue StandardError => exc
               @logger.error("Failed to process packet from tun_read queue: #{exc.class}: #{exc}")
@@ -268,7 +269,7 @@ module TunMesh
         end
 
         @queue_manager.tun_write.push(packet.encode)
-        @manager.monitors.increment_gauge(id: :tun_tx_packets)
+        @manager.monitors.record_tun_tx_packet(packet: packet)
       end
 
       def _tx_packet(decoded_packet:, packet:, remote_node:)

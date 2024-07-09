@@ -14,7 +14,12 @@ module TunMesh
                 Types::Timing.new(
                   key: 'packet_expiration',
                   default: kwargs.fetch(:defaults).fetch(:packet_expiration),
-                  description_short: 'Number of seconds after which a packet is marked stale and dropped'
+                  min: 0.01,
+                  description_short: 'Number of seconds after which a packet is marked stale and dropped',
+                  description_long: <<~EOF
+                    This value should be below the TCP retry timout, which is 0.2s on current Linux servers.
+                    https://pracucci.com/linux-tcp-rto-min-max-and-tcp-retries2.html
+                  EOF
                 )
               )
             end

@@ -17,7 +17,7 @@ module TunMesh
                 key: 'local',
                 description_short: 'Timing values related to local subnet networking.',
                 defaults: {
-                  packet_expiration: 10
+                  packet_expiration: 0.1
                 }
               )
             )
@@ -27,7 +27,7 @@ module TunMesh
                 key: 'mesh',
                 description_short: 'Timing values related to networking outside the local subnet.',
                 defaults: {
-                  packet_expiration: 45
+                  packet_expiration: 0.1
                 }
               )
             )
