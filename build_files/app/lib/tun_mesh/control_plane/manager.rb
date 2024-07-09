@@ -38,7 +38,6 @@ module TunMesh
       end
 
       def receive_packet(**kwargs)
-        monitors.increment_gauge(id: :remote_rx_packets)
         @router.rx_remote_packet(**kwargs)
       end
 
