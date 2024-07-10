@@ -18,6 +18,7 @@ module TunMesh
 
           @logger = TunMesh::Logger.new(id: "#{self.class}(#{id})")
 
+          @remote_missing_batch_support = false
           @transmit_queue = Queue.new
         end
 
@@ -151,6 +152,33 @@ module TunMesh
           return @timing_config
         end
 
+        def _transmit_packets(packets:)
+          # Use the lower overhead path for a single packet
+          # This is the pre-batch support path, kept for compatibility
+          if @remote_missing_batch_support || packets.length == 1
+            packets.each do |packet|
+              api_client.transmit_packet(packet: packet)
+              @logger.debug { "Successfully transmitted #{packets.id}" }
+              @manager.monitors.record_remote_tx_packet(dest_node_id: id, packet: packet)
+            end
+          else
+            begin
+              api_client.transmit_packet_batch(packets: packets)
+              @logger.debug { "Successfully transmitted #{packets.length} packet batch: #{packets.map(&:id).join(',')}" }
+
+              packets.each do |packet|
+                @manager.monitors.record_remote_tx_packet(dest_node_id: id, packet: packet)
+              end
+            rescue TunMesh::ControlPlane::API::Client::RequestException => exc
+              raise exc unless exc.code.to_i == 404
+
+              @logger.warn { 'Remote node missing batch support' }
+              @remote_missing_batch_support = true
+              _transmit_packets(packets: packets)
+            end
+          end
+        end
+
         def _transmit_worker
           @transmit_worker ||= Thread.new do
             @logger.debug { 'transmit_worker: Initialized' }
@@ -178,19 +206,7 @@ module TunMesh
               @logger.debug { "transmit_worker: Popped #{packets.length} packets off the queue" }
 
               begin
-                if packets.length == 1
-                  # Use the lower overhead path for a single packet
-                  # This is the pre-batch support path, kept for compatibility
-                  api_client.transmit_packet(packet: packets[0])
-                  @logger.debug { "Successfully transmitted #{packets[0].id}" }
-                else
-                  api_client.transmit_packet_batch(packets: packets)
-                  @logger.debug { "Successfully transmitted #{packets.length} packet batch: #{packets.map(&:id).join(',')}" }
-                end
-
-                packets.each do |packet|
-                  @manager.monitors.record_remote_tx_packet(dest_node_id: id, packet: packet)
-                end
+                _transmit_packets(packets: packets)
               rescue StandardError => exc
                 @logger.warn("transmit_worker: Iteration caught exception: #{exc.class}: #{exc}")
                 @logger.debug { exc.backtrace }
