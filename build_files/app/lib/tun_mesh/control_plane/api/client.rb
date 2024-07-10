@@ -130,6 +130,18 @@ module TunMesh
           end
         end
 
+        def transmit_packet_batch(packets:)
+          # packets being a array of TunMesh::IPC::Packet is expected to be enforced by the caller
+          auth_session.auth_wrapper do |auth|
+            return _post_mutual(
+              auth: auth,
+              path: "/tunmesh/control/v0/packet/rx/#{TunMesh::CONFIG.node_id}/batch",
+              payload: packets.map(&:to_json), # Pre-jsonify the payloads as it makes the RX path much easier
+              valid_response_codes: [204]
+            )
+          end
+        end
+
         private
 
         def _get_unauthed(path:, expected_content_type: 'application/json')

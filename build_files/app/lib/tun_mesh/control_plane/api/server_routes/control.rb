@@ -49,6 +49,28 @@ module TunMesh
             end
           end
 
+          post '/tunmesh/control/v0/packet/rx/:remote_node_id/batch' do |remote_node_id|
+            return unless Helpers.ensure_json_content(context: self)
+
+            auth_session = settings.api_auth.auth_session_for_node_id(id: remote_node_id)
+            unless auth_session
+              status 404
+              return
+            end
+
+            body = request.body.read
+            auth_session.auth_wrapper do |session_auth_token|
+              if Helpers.ensure_rx_auth(
+                auth: session_auth_token,
+                body: body,
+                context: self
+              )
+                settings.manager.receive_packet_batch(batch_json: body, source: remote_node_id)
+                status 204
+              end
+            end
+          end
+
           get '/tunmesh/control/v0/registrations' do
             json settings.manager.registrations
           end
