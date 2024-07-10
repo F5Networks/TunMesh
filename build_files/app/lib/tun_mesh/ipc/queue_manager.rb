@@ -51,7 +51,7 @@ module TunMesh
           retry
         end
 
-        logger.debug("Successfully initialized with queue_key #{@queue_key.to_s(16)}")
+        logger.debug { "Successfully initialized with queue_key #{@queue_key.to_s(16)}" }
       end
 
       def close

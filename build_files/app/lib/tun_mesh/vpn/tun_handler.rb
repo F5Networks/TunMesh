@@ -31,7 +31,7 @@ module TunMesh
 
       def _open_tunnel
         begin
-          @logger.debug("Opening #{TunMesh::CONFIG.values.networking.tun_device_id}")
+          @logger.debug { "Opening #{TunMesh::CONFIG.values.networking.tun_device_id}" }
           tun = RbTunTap::TunDevice.new(TunMesh::CONFIG.values.networking.tun_device_id)
           tun.open(true)
 
@@ -49,18 +49,18 @@ module TunMesh
             ].join('/')
           )
 
-          @logger.debug("Configuring #{TunMesh::CONFIG.values.networking.tun_device_id} address #{dev_ipaddr_obj.address}/#{dev_ipaddr_obj.netmask}")
+          @logger.debug { "Configuring #{TunMesh::CONFIG.values.networking.tun_device_id} address #{dev_ipaddr_obj.address}/#{dev_ipaddr_obj.netmask}" }
           tun.addr    = dev_ipaddr_obj.address.to_s
           tun.netmask = dev_ipaddr_obj.netmask.to_s
 
-          @logger.debug("Bringing up #{TunMesh::CONFIG.values.networking.tun_device_id}")
+          @logger.debug { "Bringing up #{TunMesh::CONFIG.values.networking.tun_device_id}" }
           tun.up
 
           @logger.info("#{TunMesh::CONFIG.values.networking.tun_device_id} #{dev_ipaddr_obj.address}/#{dev_ipaddr_obj.netmask} open")
 
           yield tun
         ensure
-          @logger.debug("Closing #{TunMesh::CONFIG.values.networking.tun_device_id}")
+          @logger.debug { "Closing #{TunMesh::CONFIG.values.networking.tun_device_id}" }
           tun.down
           tun.close
           @logger.info("#{TunMesh::CONFIG.values.networking.tun_device_id} closed")
@@ -68,7 +68,7 @@ module TunMesh
       end
 
       def _process_traffic(tun:)
-        @logger.debug('_process_traffic() Entering')
+        @logger.debug { '_process_traffic() Entering' }
         threads = []
 
         threads.push(Thread.new do
@@ -130,12 +130,12 @@ module TunMesh
           sleep(TunMesh::CONFIG.values.process.timing.tun_handler.heartbeat_interval)
         end
 
-        @logger.debug('process_traffic() Exiting')
+        @logger.debug { 'process_traffic() Exiting' }
 
         threads.each(&:terminate)
         threads.each(&:join)
 
-        @logger.debug('process_traffic() Complete')
+        @logger.debug { 'process_traffic() Complete' }
       end
     end
   end

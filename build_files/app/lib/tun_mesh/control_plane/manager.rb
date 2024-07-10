@@ -41,7 +41,7 @@ module TunMesh
         @router.rx_remote_packet(**kwargs)
       rescue StandardError
         @logger.warn("Failed to process packet from #{source}: #{exc.class}: #{exc}")
-        @logger.debug(exc.backtrace)
+        @logger.debug { exc.backtrace }
         monitors.increment_gauge(id: :dropped_packets, labels: { reason: :exception })
       end
 
@@ -54,7 +54,7 @@ module TunMesh
             @router.rx_remote_packet(packet_json: payload, source: source)
           rescue StandardError
             @logger.warn("Failed to process packet #{index + 1} / #{packets.length} from #{source}: #{exc.class}: #{exc}")
-            @logger.debug(exc.backtrace)
+            @logger.debug { exc.backtrace }
             monitors.increment_gauge(id: :dropped_packets, labels: { reason: :exception })
           end
         end

@@ -124,7 +124,7 @@ module TunMesh
             end
           end
 
-          @logger.debug("#{node.id} finalized")
+          @logger.debug { "#{node.id} finalized" }
         end
 
         # Indended for use in node_ids_by_address lookups

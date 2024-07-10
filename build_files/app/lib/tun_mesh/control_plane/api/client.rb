@@ -47,7 +47,7 @@ module TunMesh
           end
 
           _init_persistent_http
-          @logger.debug('Initialized')
+          @logger.debug { 'Initialized' }
         end
 
         # Inits the session auth with the other end
@@ -180,7 +180,7 @@ module TunMesh
 
           common_args[:logger] = @logger if @logger
           full_args = common_args.merge(kwargs)
-          @logger.debug("Initializing PersistentHTTP with args #{full_args}")
+          @logger.debug { "Initializing PersistentHTTP with args #{full_args}" }
 
           @persistent_http = PersistentHTTP.new(**full_args)
         end

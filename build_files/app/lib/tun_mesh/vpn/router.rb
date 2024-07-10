@@ -82,7 +82,7 @@ module TunMesh
         @logger.debug { "#{packet.id}: #{net_packet_class::PROTO}: #{net_packet.source_str} -> #{net_packet.dest_str}" }
 
         unless TunMesh::CONFIG.values.networking.to_h.key?(net_packet_class::PROTO)
-          @logger.debug("Dropping packet #{packet.id} from #{net_packet.source_str} (Self) -> #{net_packet.dest_str}: #{net_packet_class::PROTO} Not supported")
+          @logger.debug { "Dropping packet #{packet.id} from #{net_packet.source_str} (Self) -> #{net_packet.dest_str}: #{net_packet_class::PROTO} Not supported" }
           @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :unsupported })
           return
         end
@@ -113,7 +113,7 @@ module TunMesh
               _rx_packet(packet: packet, source: :local)
             rescue StandardError => exc
               @logger.error("Failed to process packet from tun_read queue: #{exc.class}: #{exc}")
-              @logger.debug(exc.backtrace)
+              @logger.debug { exc.backtrace }
             end
           end
         end
@@ -212,7 +212,7 @@ module TunMesh
 
         if decoded_packet.net_config.node_address_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
           if decoded_packet.net_config.enable_broadcast
-            @logger.debug("Packet #{packet.id}: Broadcast packet to the local subnet")
+            @logger.debug { "Packet #{packet.id}: Broadcast packet to the local subnet" }
             _rx_remote_packet_to_tun(decoded_packet: decoded_packet, packet: packet, source: source, source_node_obj: source_node_obj)
             return
           else
@@ -224,7 +224,7 @@ module TunMesh
 
         if decoded_packet.net_config.network_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
           if decoded_packet.net_config.enable_broadcast
-            @logger.debug("Packet #{packet.id}: Broadcast packet to the routed subnet")
+            @logger.debug { "Packet #{packet.id}: Broadcast packet to the routed subnet" }
             _rx_remote_packet_to_tun(decoded_packet: decoded_packet, packet: packet, source: source, source_node_obj: source_node_obj)
             return
           else

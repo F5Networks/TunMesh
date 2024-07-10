@@ -81,7 +81,7 @@ module TunMesh
           return true
         rescue StandardError => exc
           @logger.error("Failed to groom remote node #{remote_node_id}: #{exc.class}: #{exc}")
-          @logger.debug(exc.backtrace)
+          @logger.debug { exc.backtrace }
           true
         end
       end

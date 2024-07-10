@@ -144,7 +144,7 @@ module TunMesh
 
         def _transmit_worker
           @transmit_worker ||= Thread.new do
-            @logger.debug('transmit_worker: Initialized')
+            @logger.debug { 'transmit_worker: Initialized' }
             loop do
               break if @transmit_queue.closed?
 
@@ -193,7 +193,7 @@ module TunMesh
                 end
               rescue StandardError => exc
                 @logger.warn("transmit_worker: Iteration caught exception: #{exc.class}: #{exc}")
-                @logger.debug(exc.backtrace)
+                @logger.debug { exc.backtrace }
 
                 packets.each do |packet|
                   @logger.warn("Dropping packet #{packet.id}: Exception") if packet&.id
@@ -202,7 +202,7 @@ module TunMesh
               end
             end
           ensure
-            @logger.debug('transmit_worker: Exiting')
+            @logger.debug { 'transmit_worker: Exiting' }
             @transmit_queue.close
           end
         end
