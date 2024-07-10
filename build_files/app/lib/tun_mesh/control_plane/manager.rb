@@ -39,6 +39,25 @@ module TunMesh
 
       def receive_packet(**kwargs)
         @router.rx_remote_packet(**kwargs)
+      rescue StandardError
+        @logger.warn("Failed to process packet from #{source}: #{exc.class}: #{exc}")
+        @logger.debug { exc.backtrace }
+        monitors.increment_gauge(id: :dropped_packets, labels: { reason: :exception })
+      end
+
+      def receive_packet_batch(batch_json:, source:)
+        # batch_json is a JSON array of JSON encoded packets because, frankly, the nesting makes this part easy.
+        packets = JSON.parse(batch_json)
+        @logger.debug { "Processing #{packets.length} batch from #{source}" }
+        packets.each.with_index do |payload, index|
+          begin
+            @router.rx_remote_packet(packet_json: payload, source: source)
+          rescue StandardError
+            @logger.warn("Failed to process packet #{index + 1} / #{packets.length} from #{source}: #{exc.class}: #{exc}")
+            @logger.debug { exc.backtrace }
+            monitors.increment_gauge(id: :dropped_packets, labels: { reason: :exception })
+          end
+        end
       end
 
       def run_api!
@@ -58,7 +77,7 @@ module TunMesh
       def _log_build_info
         info_file = Pathname.new('/app/build_info.txt') # Generated in the Dockerfile
         if info_file.file?
-          @logger.info("Tun Mesh: #{info_file.read.strip}")
+          @logger.info { "Tun Mesh: #{info_file.read.strip}" }
         else
           @logger.warn("Build info file #{info_file} missing!")
         end

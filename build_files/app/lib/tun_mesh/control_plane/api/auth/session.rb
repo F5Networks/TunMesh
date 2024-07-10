@@ -47,7 +47,7 @@ module TunMesh
             raise(ArgumentError, "new_auth is not a Auth::Token, got #{new_auth.class}") unless new_auth.is_a? Auth::Token
 
             @inbound_auth = new_auth
-            @logger.debug("Updated inbound session auth to #{@inbound_auth.id}")
+            @logger.debug { "Updated inbound session auth to #{@inbound_auth.id}" }
           end
 
           def outbound_auth
@@ -102,14 +102,14 @@ module TunMesh
           def _init_outbound
             if @outbound_auth && _outbound_expired?
               begin
-                @logger.info("Rotating outbound auth: #{@outbound_auth.age}s old")
+                @logger.info { "Rotating outbound auth: #{@outbound_auth.age}s old" }
                 # This is locked, but init_session_token needs the session token to self-rotate.
                 # Don't pass request_token as that will deadlock.
                 @outbound_auth = @api_client.init_session_token(session_auth_token: Session::SplitToken.new(session: self, outbound_auth: @outbound_auth))
-                @logger.info("Rotated outbound session auth to #{@outbound_auth.id}")
+                @logger.info { "Rotated outbound session auth to #{@outbound_auth.id}" }
               rescue StandardError => exc
                 @logger.error("Failed to rotate outbound auth: #{exc.class}: #{exc}")
-                @logger.debug(exc.backtrace)
+                @logger.debug { exc.backtrace }
               end
             end
 
@@ -117,10 +117,10 @@ module TunMesh
 
             begin
               @outbound_auth = @api_client.init_session_token(session_auth_token: nil)
-              @logger.info("Initialized outbound session auth to #{@outbound_auth.id}")
+              @logger.info { "Initialized outbound session auth to #{@outbound_auth.id}" }
             rescue StandardError => exc
               @logger.error("Failed to initialize outbound auth: #{exc.class}: #{exc}")
-              @logger.debug(exc.backtrace)
+              @logger.debug { exc.backtrace }
               raise(AuthError, "Failed to initialize outbound auth: #{exc.class}: #{exc}")
             end
 
@@ -132,15 +132,15 @@ module TunMesh
               return unless @outbound_auth
 
               if id.nil?
-                @logger.debug('Ignoring invalidate_outbound! request for nil ID')
+                @logger.debug { 'Ignoring invalidate_outbound! request for nil ID' }
                 return
               end
 
               if id == @outbound_auth.id
-                @logger.debug("Invalidating outbound_auth #{id}")
+                @logger.debug { "Invalidating outbound_auth #{id}" }
                 @outbound_auth = nil
               else
-                @logger.debug("Ignoring invalidate_outbound! request for #{id}, current outbound ID #{@outbound_auth&.id}")
+                @logger.debug { "Ignoring invalidate_outbound! request for #{id}, current outbound ID #{@outbound_auth&.id}" }
               end
             end
           end

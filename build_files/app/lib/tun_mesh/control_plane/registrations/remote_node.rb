@@ -104,6 +104,7 @@ module TunMesh
 
         def transmit_packet(packet:)
           raise('No worker') unless _transmit_worker.alive?
+          raise("Expected TunMesh::IPC::Packet, popped #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
 
           @transmit_queue.push(packet)
         end
@@ -129,6 +130,15 @@ module TunMesh
           tgt_registration.local.node_addresses.to_h.transform_values(&:address)
         end
 
+        def _packet_expired?(packet:)
+          packet_age = Time.now.to_f - packet.stamp
+          return false if packet_age <= TunMesh::CONFIG.values.process.timing.network[_timing_config_key].packet_expiration
+
+          @logger.warn("Dropping packet #{packet.id}: Expired: #{packet_age}s old")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :expired })
+          return true
+        end
+
         def _timing_config_key
           return @timing_config if @timing_config
 
@@ -143,35 +153,56 @@ module TunMesh
 
         def _transmit_worker
           @transmit_worker ||= Thread.new do
-            @logger.debug('transmit_worker: Initialized')
+            @logger.debug { 'transmit_worker: Initialized' }
             loop do
               break if @transmit_queue.closed?
 
-              packet = @transmit_queue.pop
-              break if packet.nil?
+              packets = []
+              packets.push(@transmit_queue.pop)
+              break if packets[0].nil?
+              next if _packet_expired?(packet: packets[0])
+
+              # Load the remainder of the batch
+              (TunMesh::CONFIG.values.control_api.max_batch_size - 1).times do
+                begin
+                  packet = @transmit_queue.pop(true)
+                  next if _packet_expired?(packet: packet)
+
+                  packets.push(packet)
+                rescue ThreadError
+                  # "If non_block is true, the thread isn't suspended, and ThreadError is raised."
+                  break
+                end
+              end
+
+              @logger.debug { "transmit_worker: Popped #{packets.length} packets off the queue" }
 
               begin
-                raise("Expected TunMesh::IPC::Packet, popped #{packet.class}") unless packet.is_a? TunMesh::IPC::Packet
-
-                packet_age = Time.now.to_f - packet.stamp
-                if packet_age > TunMesh::CONFIG.values.process.timing.network[_timing_config_key].packet_expiration
-                  @logger.warn("Dropping packet #{packet.id}: Expired: #{packet_age}s old")
-                  @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :expired })
-                  next
+                if packets.length == 1
+                  # Use the lower overhead path for a single packet
+                  # This is the pre-batch support path, kept for compatibility
+                  api_client.transmit_packet(packet: packets[0])
+                  @logger.debug { "Successfully transmitted #{packets[0].id}" }
+                else
+                  api_client.transmit_packet_batch(packets: packets)
+                  @logger.debug { "Successfully transmitted #{packets.length} packet batch: #{packets.map(&:id).join(',')}" }
                 end
 
-                api_client.transmit_packet(packet: packet)
-                @logger.debug("Successfully transmitted #{packet.id}")
-                @manager.monitors.record_remote_tx_packet(dest_node_id: id, packet: packet)
+                packets.each do |packet|
+                  @manager.monitors.record_remote_tx_packet(dest_node_id: id, packet: packet)
+                end
               rescue StandardError => exc
                 @logger.warn("transmit_worker: Iteration caught exception: #{exc.class}: #{exc}")
-                @logger.debug(exc.backtrace)
-                @logger.warn("Dropping packet #{packet.id}: Exception") if packet&.id
-                @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :exception })
+                @logger.debug { exc.backtrace }
+
+                packets.each do |packet|
+                  @logger.warn("Dropping packet #{packet.id}: Exception") if packet&.id
+                  @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :exception })
+                end
               end
             end
           ensure
-            @logger.debug('transmit_worker: Exiting')
+            @logger.debug { 'transmit_worker: Exiting' }
             @transmit_queue.close
           end
         end

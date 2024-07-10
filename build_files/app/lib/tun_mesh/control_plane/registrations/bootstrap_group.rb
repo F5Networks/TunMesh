@@ -39,16 +39,16 @@ module TunMesh
           @bootstrap_attempts += 1
 
           if config.bootstrap_retries < 0
-            @logger.info("Bootstrapping, attempt #{@bootstrap_attempts}")
+            @logger.info { "Bootstrapping, attempt #{@bootstrap_attempts}" }
           else
-            @logger.info("Bootstrapping, attempt #{@bootstrap_attempts}/#{config.bootstrap_retries + 1}")
+            @logger.info { "Bootstrapping, attempt #{@bootstrap_attempts}/#{config.bootstrap_retries + 1}" }
           end
 
           config.bootstrap_node_urls.each do |node_url|
             remote_node = @registrations.bootstrap_node(remote_url: node_url)
 
             if remote_node
-              @logger.info("Bootstrap to #{node_url} successfully reached node #{remote_node.id}")
+              @logger.info { "Bootstrap to #{node_url} successfully reached node #{remote_node.id}" }
               @remote_node_ids.push(remote_node.id)
             else
               @logger.warn("Bootstrap to #{node_url} failed")
@@ -81,7 +81,7 @@ module TunMesh
           return true
         rescue StandardError => exc
           @logger.error("Failed to groom remote node #{remote_node_id}: #{exc.class}: #{exc}")
-          @logger.debug(exc.backtrace)
+          @logger.debug { exc.backtrace }
           true
         end
       end

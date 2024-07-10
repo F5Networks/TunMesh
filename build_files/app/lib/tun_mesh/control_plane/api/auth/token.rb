@@ -57,7 +57,7 @@ module TunMesh
           def verify(payload:, token:)
             decoded_token = JWT.decode(token, @secret, true, { algorithm: JWT_ALGORITHM })
             claims = decoded_token[0].transform_keys(&:to_sym)
-            @logger.debug("Decoded token issued by #{claims[:iss]}: Claims: #{claims}")
+            @logger.debug { "Decoded token issued by #{claims[:iss]}: Claims: #{claims}" }
 
             raise(AuthError, "Audience Mismatch.  Expected #{TunMesh::CONFIG.node_id}, got #{claims.fetch(:aud)}") if claims.fetch(:aud) != TunMesh::CONFIG.node_id
             raise(AuthError, "Subject Mismatch.  Expected #{@id}, got #{claims.fetch(:sub)}") if claims.fetch(:sub) != @id
@@ -65,7 +65,7 @@ module TunMesh
             sig = _payload_sig(payload: payload)
             raise(AuthError, "Signature Mismatch.  Expected #{sig}, got #{claims.fetch(:sig)}") if claims.fetch(:sig) != sig
 
-            @logger.debug("Validated token issued by #{claims[:iss]} for payload #{sig} with auth #{id}")
+            @logger.debug { "Validated token issued by #{claims[:iss]} for payload #{sig} with auth #{id}" }
 
             return claims[:iss]
           rescue StandardError => exc

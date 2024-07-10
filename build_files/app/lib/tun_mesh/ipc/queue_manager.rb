@@ -42,7 +42,7 @@ module TunMesh
           @queue_key = (rand((TunMesh::CONFIG.values.process.ipc.group.key_range_min)..(TunMesh::CONFIG.values.process.ipc.group.key_range_max)) & 0xfffffff0) if @control
           _init_queues
         rescue StandardError => exc
-          logger.info("Failed to init with queue_key #{@queue_key.to_s(16)}: Attempt #{retries}: #{exc.class}: #{exc}") if @control
+          logger.info { "Failed to init with queue_key #{@queue_key.to_s(16)}: Attempt #{retries}: #{exc.class}: #{exc}" } if @control
 
           raise exc unless @control
           raise exc if retries > TunMesh::CONFIG.values.process.ipc.group.max_init_attempts
@@ -51,7 +51,7 @@ module TunMesh
           retry
         end
 
-        logger.debug("Successfully initialized with queue_key #{@queue_key.to_s(16)}")
+        logger.debug { "Successfully initialized with queue_key #{@queue_key.to_s(16)}" }
       end
 
       def close

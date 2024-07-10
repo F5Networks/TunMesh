@@ -36,7 +36,7 @@ module TunMesh
 
       def bootstrap!
         if TunMesh::CONFIG.values.clustering.reload_config_on_bootstrap
-          @logger.debug('bootstrap!: Reloading config per config clustering.reload_config_on_bootstrap')
+          @logger.debug { 'bootstrap!: Reloading config per config clustering.reload_config_on_bootstrap' }
           TunMesh::CONFIG.parse_config! if TunMesh::CONFIG.values.clustering.reload_config_on_bootstrap
         end
 
@@ -44,23 +44,23 @@ module TunMesh
           @bootstrap_groups[group_name].bootstrap! unless @bootstrap_groups[group_name].bootstrapped?
         rescue StandardError => exc
           @logger.error("Failed to bootstrap group #{group_name}: exception: #{exc.class}: #{exc}")
-          @logger.debug(exc.backtrace)
+          @logger.debug { exc.backtrace }
           next
         end
       end
 
       def bootstrap_node(remote_url:, remote_node_id: nil)
         if remote_url == TunMesh::CONFIG.values.clustering.control_api_advertise_url.to_s
-          @logger.debug("Skipping bootstrap to #{remote_url}: Self")
+          @logger.debug { "Skipping bootstrap to #{remote_url}: Self" }
           return nil
         end
 
         if @fault_trackers[:bootstrap].blocked?(id: remote_url)
-          @logger.debug("Bootstrap to #{remote_url} blocked by fault tracker")
+          @logger.debug { "Bootstrap to #{remote_url} blocked by fault tracker" }
           return nil
         end
 
-        @logger.info("Bootstrapping remote node #{remote_node_id} at #{remote_url}")
+        @logger.info { "Bootstrapping remote node #{remote_node_id} at #{remote_url}" }
 
         return @fault_trackers[:bootstrap].instrument(id: remote_url) do
           _register(api_client: @manager.api.new_client(remote_url: remote_url))
@@ -107,9 +107,9 @@ module TunMesh
 
         age = Time.now.to_i - registration.stamp
         if @remote_nodes.id?(registration.local.id)
-          @logger.debug("Refreshed registration from #{registration.local.id} (#{age}s old)")
+          @logger.debug { "Refreshed registration from #{registration.local.id} (#{age}s old)" }
         else
-          @logger.info("Received new registration from #{registration.local.id} (#{age}s old)")
+          @logger.info { "Received new registration from #{registration.local.id} (#{age}s old)" }
         end
 
         return @remote_nodes.register(api_client: api_client, registration: registration)
@@ -141,7 +141,7 @@ module TunMesh
               _groom
             rescue StandardError => exc
               @logger.error("Worker thread caught exception: #{exc.class}: #{exc}")
-              @logger.debug(exc.backtrace)
+              @logger.debug { exc.backtrace }
             end
           end
         end
@@ -154,7 +154,7 @@ module TunMesh
           bootstrap! unless bootstrapped?
         rescue StandardError => exc
           @logger.error("Failed to bootstrap: exception: #{exc.class}: #{exc}")
-          @logger.debug(exc.backtrace)
+          @logger.debug { exc.backtrace }
         end
 
         if @remote_nodes.empty?
@@ -166,21 +166,21 @@ module TunMesh
           _update_registration(id: id)
         rescue StandardError => exc
           @logger.error("Failed to groom remote node #{id}: exception: #{exc.class}: #{exc}")
-          @logger.debug(exc.backtrace)
+          @logger.debug { exc.backtrace }
         end
 
         begin
           @remote_nodes.groom!
         rescue StandardError => exc
           @logger.error("Failed to groom remote_nodes: exception: #{exc.class}: #{exc}")
-          @logger.debug(exc.backtrace)
+          @logger.debug { exc.backtrace }
         end
 
         begin
           @fault_trackers.values.each(&:groom)
         rescue StandardError => exc
           @logger.error("Failed to groom fault_trackers: exception: #{exc.class}: #{exc}")
-          @logger.debug(exc.backtrace)
+          @logger.debug { exc.backtrace }
         end
       end
 
@@ -215,7 +215,7 @@ module TunMesh
         raise(ArgumentError, "Unknown remote node #{id}") unless remote_node
 
         if remote_node.registration_required? && !@fault_trackers[:registration_update].blocked?(id: id)
-          @logger.debug("Updating registration to #{id}")
+          @logger.debug { "Updating registration to #{id}" }
           begin
             @fault_trackers[:registration_update].instrument(id: id) do
               _register(api_client: remote_node.api_client)

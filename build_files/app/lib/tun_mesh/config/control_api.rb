@@ -21,6 +21,16 @@ module TunMesh
           )
         )
 
+        add_field(
+          Types::UInt.new(
+            key: 'max_batch_size',
+            default: 64,
+            description_short: 'Maximum number of VPN packets to send in a single API request',
+            min: 1,
+            max: 1024
+          )
+        )
+
         add_field(ControlAPI::SSL.new)
       end
     end

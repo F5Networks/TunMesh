@@ -25,7 +25,7 @@ module TunMesh
         end
 
         def process_init_session_request(raw_request:, remote_node_id:)
-          @logger.debug("Processing session auth update request from #{remote_node_id}")
+          @logger.debug { "Processing session auth update request from #{remote_node_id}" }
           auth_session = auth_session_for_node_id(id: remote_node_id)
           return 'Failed', 404 unless auth_session
 
@@ -44,7 +44,7 @@ module TunMesh
             response_secret = remote_asymmetric_encryption.encrypt(payload: new_secret)
           rescue StandardError => exc
             @logger.warn("Failed to encrypt secret with provided public key from #{remote_node_id}: #{exc.class}: #{exc}")
-            @logger.debug(exc.backtrace)
+            @logger.debug { exc.backtrace }
             return 'Failed', 400
           end
 
@@ -53,14 +53,14 @@ module TunMesh
             secret: new_secret
           )
 
-          @logger.info("Successfully updated inbound session auth for #{remote_node_id} to #{auth_session.inbound_auth.id}")
+          @logger.info { "Successfully updated inbound session auth for #{remote_node_id} to #{auth_session.inbound_auth.id}" }
           return {
             id: auth_session.inbound_auth.id,
             secret: response_secret
           }
         rescue StandardError => exc
           @logger.error("Failed to process session auth update request from #{remote_node_id}: #{exc.class}: #{exc}")
-          @logger.debug(exc.backtrace)
+          @logger.debug { exc.backtrace }
           return 'Failed', 503
         end
 
