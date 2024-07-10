@@ -130,6 +130,15 @@ module TunMesh
           tgt_registration.local.node_addresses.to_h.transform_values(&:address)
         end
 
+        def _packet_expired?(packet:)
+          packet_age = Time.now.to_f - packet.stamp
+          return false if packet_age <= TunMesh::CONFIG.values.process.timing.network[_timing_config_key].packet_expiration
+
+          @logger.warn("Dropping packet #{packet.id}: Expired: #{packet_age}s old")
+          @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :expired })
+          return true
+        end
+
         def _timing_config_key
           return @timing_config if @timing_config
 
@@ -151,11 +160,15 @@ module TunMesh
               packets = []
               packets.push(@transmit_queue.pop)
               break if packets[0].nil?
+              next if _packet_expired?(packet: packets[0])
 
               # Load the remainder of the batch
               (TunMesh::CONFIG.values.control_api.max_batch_size - 1).times do
                 begin
-                  packets.push(@transmit_queue.pop(true))
+                  packet = @transmit_queue.pop(true)
+                  next if _packet_expired?(packet: packet)
+
+                  packets.push(packet)
                 rescue ThreadError
                   # "If non_block is true, the thread isn't suspended, and ThreadError is raised."
                   break
@@ -165,19 +178,6 @@ module TunMesh
               @logger.debug { "transmit_worker: Popped #{packets.length} packets off the queue" }
 
               begin
-                packets.delete_if do |packet|
-                  packet_age = Time.now.to_f - packet.stamp
-                  if packet_age > TunMesh::CONFIG.values.process.timing.network[_timing_config_key].packet_expiration
-                    @logger.warn("Dropping packet #{packet.id}: Expired: #{packet_age}s old")
-                    @manager.monitors.increment_gauge(id: :dropped_packets, labels: { reason: :expired })
-                    true
-                  else
-                    false
-                  end
-                end
-
-                next if packets.empty?
-
                 if packets.length == 1
                   # Use the lower overhead path for a single packet
                   # This is the pre-batch support path, kept for compatibility
