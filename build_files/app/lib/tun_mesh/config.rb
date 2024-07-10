@@ -38,7 +38,7 @@ module TunMesh
     end
 
     def parse_config!
-      @logger.info("Parsing config file #{config_path}")
+      @logger.info { "Parsing config file #{config_path}" }
       yaml_parsed_contents = YAML.safe_load(config_path.read)
 
       raise(Config::Errors::MissingKeyError.new('Missing top level tun_mesh key', 'tun_mesh')) unless yaml_parsed_contents.key?('tun_mesh')

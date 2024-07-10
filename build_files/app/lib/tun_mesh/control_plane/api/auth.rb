@@ -53,7 +53,7 @@ module TunMesh
             secret: new_secret
           )
 
-          @logger.info("Successfully updated inbound session auth for #{remote_node_id} to #{auth_session.inbound_auth.id}")
+          @logger.info { "Successfully updated inbound session auth for #{remote_node_id} to #{auth_session.inbound_auth.id}" }
           return {
             id: auth_session.inbound_auth.id,
             secret: response_secret

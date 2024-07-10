@@ -60,7 +60,7 @@ module TunMesh
           return nil
         end
 
-        @logger.info("Bootstrapping remote node #{remote_node_id} at #{remote_url}")
+        @logger.info { "Bootstrapping remote node #{remote_node_id} at #{remote_url}" }
 
         return @fault_trackers[:bootstrap].instrument(id: remote_url) do
           _register(api_client: @manager.api.new_client(remote_url: remote_url))
@@ -109,7 +109,7 @@ module TunMesh
         if @remote_nodes.id?(registration.local.id)
           @logger.debug { "Refreshed registration from #{registration.local.id} (#{age}s old)" }
         else
-          @logger.info("Received new registration from #{registration.local.id} (#{age}s old)")
+          @logger.info { "Received new registration from #{registration.local.id} (#{age}s old)" }
         end
 
         return @remote_nodes.register(api_client: api_client, registration: registration)

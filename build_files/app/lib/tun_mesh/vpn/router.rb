@@ -139,7 +139,7 @@ module TunMesh
               return
             end
 
-            @logger.info("Packet #{packet.id}: Broadcast packet to the local subnet")
+            @logger.info { "Packet #{packet.id}: Broadcast packet to the local subnet" }
             proto_nodes = @manager.registrations.nodes_by_proto(proto: decoded_packet.proto)
             proto_nodes.select! do |remote_node|
               decoded_packet.net_config.node_address_cidr.include?(remote_node.node_addresses[decoded_packet.proto])
@@ -178,7 +178,7 @@ module TunMesh
 
         if decoded_packet.net_config.network_cidr.other_broadcast?(decoded_packet.net_packet.dest_str)
           if decoded_packet.net_config.enable_broadcast
-            @logger.info("Packet #{packet.id}: Broadcast packet to the routed subnet")
+            @logger.info { "Packet #{packet.id}: Broadcast packet to the routed subnet" }
             @manager.registrations.nodes_by_proto(proto: decoded_packet.proto).each do |proto_remote_node|
               _tx_packet(decoded_packet: decoded_packet, packet: packet, remote_node: proto_remote_node)
             end

@@ -56,14 +56,14 @@ module TunMesh
           @logger.debug { "Bringing up #{TunMesh::CONFIG.values.networking.tun_device_id}" }
           tun.up
 
-          @logger.info("#{TunMesh::CONFIG.values.networking.tun_device_id} #{dev_ipaddr_obj.address}/#{dev_ipaddr_obj.netmask} open")
+          @logger.info { "#{TunMesh::CONFIG.values.networking.tun_device_id} #{dev_ipaddr_obj.address}/#{dev_ipaddr_obj.netmask} open" }
 
           yield tun
         ensure
           @logger.debug { "Closing #{TunMesh::CONFIG.values.networking.tun_device_id}" }
           tun.down
           tun.close
-          @logger.info("#{TunMesh::CONFIG.values.networking.tun_device_id} closed")
+          @logger.info { "#{TunMesh::CONFIG.values.networking.tun_device_id} closed" }
         end
       end
 

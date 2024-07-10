@@ -77,7 +77,7 @@ module TunMesh
       def _log_build_info
         info_file = Pathname.new('/app/build_info.txt') # Generated in the Dockerfile
         if info_file.file?
-          @logger.info("Tun Mesh: #{info_file.read.strip}")
+          @logger.info { "Tun Mesh: #{info_file.read.strip}" }
         else
           @logger.warn("Build info file #{info_file} missing!")
         end

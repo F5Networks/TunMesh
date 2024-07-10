@@ -145,7 +145,7 @@ module TunMesh
 
                 @logger.warn("Replacing node #{@node_ids_by_address[proto][address]} with #{updated_node.id} for #{proto} #{address}")
               else
-                @logger.info("Storing node #{updated_node.id} for #{proto} #{address}")
+                @logger.info { "Storing node #{updated_node.id} for #{proto} #{address}" }
               end
 
               @node_ids_by_address[proto][address] = updated_node.id

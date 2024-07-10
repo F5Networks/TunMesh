@@ -102,11 +102,11 @@ module TunMesh
           def _init_outbound
             if @outbound_auth && _outbound_expired?
               begin
-                @logger.info("Rotating outbound auth: #{@outbound_auth.age}s old")
+                @logger.info { "Rotating outbound auth: #{@outbound_auth.age}s old" }
                 # This is locked, but init_session_token needs the session token to self-rotate.
                 # Don't pass request_token as that will deadlock.
                 @outbound_auth = @api_client.init_session_token(session_auth_token: Session::SplitToken.new(session: self, outbound_auth: @outbound_auth))
-                @logger.info("Rotated outbound session auth to #{@outbound_auth.id}")
+                @logger.info { "Rotated outbound session auth to #{@outbound_auth.id}" }
               rescue StandardError => exc
                 @logger.error("Failed to rotate outbound auth: #{exc.class}: #{exc}")
                 @logger.debug { exc.backtrace }
@@ -117,7 +117,7 @@ module TunMesh
 
             begin
               @outbound_auth = @api_client.init_session_token(session_auth_token: nil)
-              @logger.info("Initialized outbound session auth to #{@outbound_auth.id}")
+              @logger.info { "Initialized outbound session auth to #{@outbound_auth.id}" }
             rescue StandardError => exc
               @logger.error("Failed to initialize outbound auth: #{exc.class}: #{exc}")
               @logger.debug { exc.backtrace }
