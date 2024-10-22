@@ -158,7 +158,7 @@ module TunMesh
           if @remote_missing_batch_support || packets.length == 1
             packets.each do |packet|
               api_client.transmit_packet(packet: packet)
-              @logger.debug { "Successfully transmitted #{packets.id}" }
+              @logger.debug { "Successfully transmitted #{packet.id}" }
               @manager.monitors.record_remote_tx_packet(dest_node_id: id, packet: packet)
             end
           else
