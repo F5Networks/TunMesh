@@ -1,16 +1,6 @@
 Tun Mesh: L3 Mesh VPN Container Sidecar
 =======================================
 
-Project State
--------------
-
-- F5 Internal: Contains undisclosed IP (IDF01011)
-- Incubating: Final location pending IDF01011 / open source decision
-- Written with the intent of being a open source, externally published standalone module
-
-Description
------------
-
 Tun Mesh is a Layer 3 mesh VPN intended for use as a sidecar to applications deployed in container orchestration platforms.
 This application sets up a private, internal network between the different instances of the app.
 The network is a layer 3 network capable of carrying any layer 4 or higher traffic transparently.
@@ -77,3 +67,20 @@ See [docs/security.md](docs/security.md) for more details on the security model.
 
 This app currently does not support high bandwidth flows.
 See [docs/known_gaps.md](docs/known_gaps.md) for more details.
+
+License and Copyright
+---------------------
+
+Copyright F5, Inc. 2024
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
