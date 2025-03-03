@@ -1,7 +1,7 @@
 #
 # Gem compiling build container
 #
-FROM public.ecr.aws/docker/library/ruby:3.2-slim AS gem-compiler
+FROM public.ecr.aws/docker/library/ruby:3.4-slim AS gem-compiler
 
 RUN apt-get update && \
     apt-get install -y ca-certificates
@@ -19,7 +19,7 @@ RUN bundle install
 #
 # Container build copying in compliled artifacts from build image: Keep the container slim by not including build deps
 #
-FROM public.ecr.aws/docker/library/ruby:3.2-slim
+FROM public.ecr.aws/docker/library/ruby:3.4-slim
 
 RUN apt-get update && \
     apt-get install -y ca-certificates
