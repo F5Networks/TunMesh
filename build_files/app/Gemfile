@@ -14,8 +14,9 @@ gem 'persistent_http', '~> 2.0', git: 'https://github.com/ag-TJNII/persistent_ht
 gem 'prometheus-client', '~> 4.0'
 
 gem 'puma', '~> 6.0'
-gem 'sinatra', '~> 3.0'
-gem 'sinatra-contrib', '~> 3.0'
+gem 'rackup', '~> 2.2'
+gem 'sinatra', '~> 4.1'
+gem 'sinatra-contrib', '~> 4.0'
 
 gem 'jwt', '~> 2.8'
 
