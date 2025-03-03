@@ -1,3 +1,4 @@
+require 'ostruct'
 require './spec/helpers/spec_helper'
 require './lib/tun_mesh/config/errors'
 require './lib/tun_mesh/config/types/file'
