@@ -8,6 +8,7 @@ RUN apt-get update && \
 
 RUN apt-get install -y build-essential
 RUN apt-get install -y git
+RUN apt-get install -y libssl-dev
 
 COPY build_files/app/Gemfile build_files/app/Gemfile.lock /app/
 
