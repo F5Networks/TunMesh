@@ -36,6 +36,10 @@ module TunMesh
           ]
           Sinatra::Base.set(:bind, puma_bind.join)
 
+          # Disable HostAuthorization middleware
+          # This app doesn't take action based on host headers
+          Sinatra::Base.set(:host_authorization, { permitted_hosts: [] })
+
           super
         end
 
